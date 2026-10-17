@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/chtitoon/performance.md/main/schema.json",
+  "title": "PERFORMANCE.md front matter",
+  "description": "The front matter of a PERFORMANCE.md file, format version 1.0 (spec.md). `performance-md lint` checks this schema plus what a schema can't express: units by dimension, metrics each tool emits, unique metric and stat, and overrides of real targets.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "version": {
+      "description": "The format version this file needs, as a quoted \"major.minor\" string.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "errorMessage": "must be a quoted \"major.minor\" string, like \"1.0\""
+    },
+    "name": {
+      "description": "Defaults to the folder name. Unique across a repository: results are keyed by it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "measure": {
+      "description": "How the surface is measured; a list holds one entry per tool.",
+      "anyOf": [
+        { "$ref": "#/$defs/measure" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/measure" } }
+      ]
+    },
+    "surfaces": { "$ref": "#/$defs/later" },
+    "extends": { "$ref": "#/$defs/later" }
+  },
+  "patternProperties": { "^x-": true },
+  "additionalProperties": false,
+  "anyOf": [
+    { "required": ["artifact"] },
+    { "required": ["measure"] }
+  ],
+  "$defs": {
+    "later": {
+      "description": "Reserved for a later version of the format.",
+      "not": {},
+      "errorMessage": "not supported yet: reserved for a later version of the format"
+    },
+    "quantity": {
+      "description": "A number, an optional space and a unit: B, KB, MB (1 KB = 1024 B), ms, s, %, or none.",
+      "type": ["number", "string"],
+      "minimum": 0,
+      "pattern": "^[0-9]+(\\.[0-9]+)? ?(B|KB|MB|ms|s|%)?$",
+      "errorMessage": "{value} is not a quantity: a number, an optional space and a unit, like 175 KB, 2.5 s, 2% or 0.1"
+    },
+    "origin": {
+      "type": "string",
+      "pattern": "^https?://[^/?#\\s]+/?$",
+      "errorMessage": "{value} is not an origin: a scheme and host with no path, like https://example.com"
+    },
+    "target": {
+      "type": "string",
+      "pattern": "^(/|x-)",
+      "errorMessage": "{value} is not a target: targets are paths starting with /, like /pricing"
+    },
+    "artifact": {
+      "description": "What the surface ships, read without running it.",
+      "type": "object",
+      "required": ["type", "dist", "origin"],
+      "properties": {
+        "type": {
+          "enum": ["static-site"],
+          "errorMessage": "{value} is not an artifact type; version 1.0 defines static-site"
+        },
+        "dist": { "description": "The built site, relative to this file's folder.", "type": "string", "minLength": 1 },
+        "origin": { "description": "The site's own origin.", "$ref": "#/$defs/origin" },
+        "routes": {
+          "type": "object",
+          "properties": {
+            "clean_urls": { "description": "/about serves about.html. Default false.", "type": "boolean" }
+          },
+          "patternProperties": { "^x-": true },
+          "additionalProperties": false
+        },
+        "hashed_assets": { "description": "Glob of content-hashed files, used by `changed`. Default none.", "type": "string", "minLength": 1 },
+        "fonts": {
+          "description": "Count a @font-face only if the page uses characters in its range (default), or all of them.",
+          "enum": ["unicode-range", "all"]
+        },
+        "budgets": { "$ref": "#/$defs/static-site-budgets" },
+        "rules": { "$ref": "#/$defs/static-site-rules" },
+        "overrides": {
+          "description": "Per target: budgets and rules keys that replace the file's.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/target" },
+          "patternProperties": { "^x-": true },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "budgets": { "$ref": "#/$defs/static-site-budgets" },
+              "rules": { "$ref": "#/$defs/static-site-rules" }
+            },
+            "patternProperties": { "^x-": true },
+            "additionalProperties": false
+          }
+        },
+        "exclude": { "$ref": "#/$defs/later" }
+      },
+      "patternProperties": { "^x-": true },
+      "additionalProperties": false
+    },
+    "static-site-budgets": {
+      "description": "Size limits applied to every page. A budget that isn't written isn't checked.",
+      "type": "object",
+      "properties": {
+        "total": { "description": "Everything a page downloads.", "$ref": "#/$defs/quantity" },
+        "html": { "$ref": "#/$defs/quantity" },
+        "css": { "description": "Inline CSS counts here.", "$ref": "#/$defs/quantity" },
+        "js": { "description": "Inline JS counts here.", "$ref": "#/$defs/quantity" },
+        "fonts": { "$ref": "#/$defs/quantity" },
+        "images": { "$ref": "#/$defs/quantity" },
+        "image_max": { "description": "Any single image.", "$ref": "#/$defs/quantity" }
+      },
+      "patternProperties": { "^x-": true },
+      "additionalProperties": false
+    },
+    "static-site-rules": {
+      "description": "Requirements without a size, applied to every page. A rule that isn't written isn't checked.",
+      "type": "object",
+      "properties": {
+        "image_formats": {
+          "description": "Allowed image formats, by file extension.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$",
+            "errorMessage": "{value} is not a format: write a file extension in lower case, like webp"
+          }
+        },
+        "image_dimensions": { "description": "true: every <img> has width and height.", "type": "boolean" },
+        "origins": {
+          "description": "Where resources may load from: self and any other origins listed.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "anyOf": [{ "const": "self" }, { "$ref": "#/$defs/origin" }],
+            "errorMessage": "{value} is not self or an origin like https://cdn.example.com"
+          }
+        }
+      },
+      "patternProperties": { "^x-": true },
+      "additionalProperties": false
+    },
+    "measure": {
+      "description": "How the surface is measured, and the limits on what's measured.",
+      "type": "object",
+      "required": ["tool"],
+      "properties": {
+        "tool": {
+          "enum": ["lighthouse"],
+          "errorMessage": "{value} is not a tool; version 1.0 defines lighthouse"
+        },
+        "runs": { "description": "Per side when comparing. Default 5.", "type": "integer", "minimum": 1 },
+        "noise": { "description": "How noisy the measurement is, as a share of the base value. Default 0%.", "$ref": "#/$defs/quantity" },
+        "preset": { "description": "Lighthouse's preset. Default mobile.", "enum": ["mobile", "desktop"] },
+        "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+        "overrides": {
+          "description": "Per target: metrics entries, merged over the file's by metric and stat.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/target" },
+          "patternProperties": { "^x-": true },
+          "additionalProperties": {
+            "type": "object",
+            "required": ["metrics"],
+            "properties": {
+              "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } }
+            },
+            "patternProperties": { "^x-": true },
+            "additionalProperties": false
+          }
+        }
+      },
+      "patternProperties": { "^x-": true },
+      "additionalProperties": false
+    },
+    "metric": {
+      "description": "One statistic of one metric, with a limit, a delta or both.",
+      "type": "object",
+      "required": ["metric", "stat"],
+      "properties": {
+        "metric": { "enum": ["score", "fcp", "lcp", "tbt", "cls", "transfer", "latency", "error_rate"] },
+        "stat": {
+          "type": "string",
+          "pattern": "^(median|mean|min|max|worst|p[1-9][0-9]?(\\.[0-9]+)?)$",
+          "errorMessage": "{value} is not a stat: median, mean, min, max, worst or p<N>, like p95"
+        },
+        "limit": { "description": "The statistic must not be worse than this.", "$ref": "#/$defs/quantity" },
+        "delta": { "description": "How much worse than the base still counts as on par.", "$ref": "#/$defs/quantity" },
+        "objective": { "$ref": "#/$defs/later" },
+        "window": { "$ref": "#/$defs/later" },
+        "source": { "$ref": "#/$defs/later" }
+      },
+      "patternProperties": { "^x-": true },
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["limit"] },
+        { "required": ["delta"] }
+      ]
+    }
+  }
+}
