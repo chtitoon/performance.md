@@ -17,6 +17,7 @@ This repo holds the PERFORMANCE.md format (`spec.md`) and `performance-md`, the 
 | `npm test` | All tests (`node:test`, files in `test/*.test.mjs`) |
 | `node bin/performance-md.mjs lint [--strict] [--all] [--file <path>]` | Check a PERFORMANCE.md against the spec |
 | `node bin/performance-md.mjs check`, `changed`, `measure`, `compare` | The other commands of the spec's Commands table |
+| `npm install --no-save lighthouse@12.6.1` | Before running `measure` by hand; it uses the installed Chrome, or the one `CHROME_PATH` names |
 
 ## How the code is built
 

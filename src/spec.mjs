@@ -35,6 +35,9 @@ export const ARTIFACT_TYPES = {
 
 export const TOOLS = {
   lighthouse: {
+    // The one Lighthouse version this CLI runs: scores shift between versions, so upgrading is a
+    // deliberate change to the CLI (spec: Tools).
+    version: '12.6.1',
     emits: ['score', 'fcp', 'lcp', 'tbt', 'cls', 'transfer'],
     defaults: { preset: 'mobile' },
   },

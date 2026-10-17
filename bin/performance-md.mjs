@@ -20,10 +20,17 @@ const COMMANDS = {
   changed: {
     usage: 'changed <base> <head>',
     does: 'Print the targets whose artifact differs between two builds',
-    positionals: 2,
+    positionals: [2, 2],
     run: async (values, positionals) => (await import('../src/changed.mjs')).runChanged(values, positionals),
   },
-  measure: { usage: 'measure <out> --head <path|url> [--base <path|url>] [targets…]', does: 'Run each measure tool and write results' },
+  measure: {
+    usage: 'measure <out> --head <path|url> [--base <path|url>] [targets…]',
+    does: 'Run each measure tool and write <out>/results.jsonl',
+    options: { head: { type: 'string' }, base: { type: 'string' } },
+    required: ['head'],
+    positionals: [1, Infinity],
+    run: async (values, positionals) => (await import('../src/measure.mjs')).runMeasure(values, positionals),
+  },
   compare: { usage: 'compare <out> [--comment <file>]', does: 'Check metrics limits and deltas on the results' },
 };
 
@@ -57,7 +64,10 @@ if (!command.run) {
 let args;
 try {
   args = parseArgs({ args: rest, options: { file: { type: 'string' }, ...command.options }, allowPositionals: Boolean(command.positionals) });
-  if (command.positionals && args.positionals.length !== command.positionals) throw new Error(`expected ${command.positionals} arguments, got ${args.positionals.length}`);
+  const [min, max] = command.positionals ?? [0, 0];
+  const count = args.positionals.length;
+  if (count < min || count > max) throw new Error(`expected ${min === max ? min : `at least ${min}`} argument${min === 1 ? '' : 's'}, got ${count}`);
+  for (const option of command.required ?? []) if (args.values[option] === undefined) throw new Error(`--${option} is required`);
 } catch (error) {
   process.stderr.write(`performance-md ${name}: ${error.message}\n\nUsage: performance-md ${command.usage} [--file <path>]\n`);
   process.exit(2);

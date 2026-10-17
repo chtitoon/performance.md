@@ -217,6 +217,8 @@ Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies
 {"name":"web","tool":"lighthouse","tool_version":"12.6.1","browser":"Chrome/141.0.7390.54","side":"head","target":"/","run":1,"metric":"lcp","value":1432,"unit":"ms"}
 ```
 
+`unit` is required: a unit of the metric's dimension from [Quantities](#quantities), or `""` for a unitless metric (`score`, `cls`). `compare` rejects a line whose unit doesn't fit its metric, so a tool reporting seconds can't pass for one reporting milliseconds.
+
 `compare` refuses to compare base and head results recorded with different tool or browser versions.
 
 ## Compatibility
