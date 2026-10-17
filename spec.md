@@ -21,7 +21,7 @@ Status: alpha. Version 1.0 may still change before the first tagged release; aft
 ```yaml
 version: "1.0"  # required; the format version this file needs, as "major.minor" (see Compatibility)
 name: web       # optional; defaults to the folder name. Unique across a repository: results are keyed by it.
-artifact: {}    # optional; what the surface ships, and budgets on it
+artifact: {}    # optional; what the surface ships, and budgets and rules on it
 measure: {}     # optional; how to measure it, and limits and comparisons on the results
 ```
 
@@ -48,17 +48,23 @@ A target is one thing checked: a page, an endpoint, a screen. Targets are never 
 
 ## artifact
 
-What the surface ships, read without running it. Budgets here are deterministic, so they fit a deploy gate.
+What the surface ships, read without running it. Budgets and rules here are deterministic, so they fit a deploy gate.
 
 ```yaml
 artifact:
-  type: static-site   # required; decides the other settings, what a target is and which budget keys exist
+  type: static-site   # required; decides the other settings, what a target is, and which budgets and rules exist
   # settings of the type
-  budgets: {}         # limits, applied to every target
-  overrides: {}       # per target: budget keys that replace the file's
+  budgets: {}         # size limits, applied to every target
+  rules: {}           # requirements without a size, applied to every target
+  overrides: {}       # per target: `budgets` and `rules` keys that replace the file's
 ```
 
-A budget that isn't written isn't checked.
+A budget limits an amount; a rule is a requirement that holds or doesn't, such as an allowed list. A budget or rule that isn't written isn't checked.
+
+```yaml
+overrides:
+  /pricing: { budgets: { js: 5 KB }, rules: { origins: [self, https://js.stripe.com] } }
+```
 
 ## measure
 
@@ -154,7 +160,7 @@ artifact:
 
 **Changed pages** (for `changed`): a page changed if its HTML differs. Files matching `hashed_assets` are skipped, because a change to one changes its name and so the HTML that links it. Any other file that differs, appears or disappears (a `favicon.svg`, say) counts as a change to every page.
 
-**What counts as a page's download:** the HTML; stylesheets it links and inline `<style>`; scripts it loads; images in `<img src>` (and `srcset`: the largest candidate, an upper bound); `<link rel="preload|icon">`; and, from CSS, `url()` references and the first `src` of each `@font-face` that the `fonts` rule selects. All weights of a matching family count (an upper bound). Sizes are uncompressed bytes on disk; `transfer` in `measure` is the compressed counterpart.
+**What counts as a page's download:** the HTML; stylesheets it links and inline `<style>`; scripts it loads; images in `<img src>` (and `srcset`: the largest candidate, an upper bound); `<link rel="preload|icon">`; and, from CSS, `url()` references and the first `src` of each `@font-face` that the `fonts` setting selects. All weights of a matching family count (an upper bound). Sizes are uncompressed bytes on disk; `transfer` in `measure` is the compressed counterpart.
 
 **Budgets:**
 
@@ -163,9 +169,14 @@ artifact:
 | `total` | everything a page downloads |
 | `html`, `css`, `js`, `fonts`, `images` | that type (inline CSS and JS count against `css` and `js`) |
 | `image_max` | any single image |
-| `image_formats` | list of allowed formats, e.g. `[svg, webp, avif]` |
+
+**Rules:**
+
+| Key | Requires |
+|-----|----------|
+| `image_formats` | images in one of the listed formats, e.g. `[svg, webp, avif]` |
 | `image_dimensions` | `true`: every `<img>` has `width` and `height` |
-| `origins` | where resources may load from: `self` and any other origins listed. Plain links don't count. |
+| `origins` | resources load only from `self` and any other origins listed. Plain links don't count. |
 
 ## Tools
 
@@ -191,7 +202,7 @@ Planned: the CLI isn't published yet. This section is what it will implement.
 | Command | Does | Exit |
 |---------|------|------|
 | `performance-md lint [--strict] [--all]` | Checks the file against this spec. `--strict` requires every defaulted field to be written. `--all` checks every `PERFORMANCE.md` under the current folder, including that names are unique. | 1 on any error |
-| `performance-md check [--dist <path>] [--report]` | Checks `artifact.budgets`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget |
+| `performance-md check [--dist <path>] [--report]` | Checks `artifact.budgets` and `artifact.rules`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget or rule |
 | `performance-md changed <base> <head>` | Prints the targets whose artifact differs between two builds, one per line. | 0 |
 | `performance-md measure <out> --head <path\|url> [--base <path\|url>] [targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. | 1 if a tool fails |
 | `performance-md compare <out> [--comment <file>]` | Checks each `metrics` limit on head and, when base results exist, each `delta`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken limit or regression |
@@ -235,6 +246,7 @@ artifact:
     images: 4 KB
     js: 0 B
     image_max: 100 KB
+  rules:
     image_formats: [svg, webp, avif]
     image_dimensions: true
     origins: [self]
