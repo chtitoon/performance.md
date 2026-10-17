@@ -20,6 +20,14 @@
   "scripts": {
     "test": "node --test"
   },
+  "peerDependencies": {
+    "lighthouse": "12.6.1"
+  },
+  "peerDependenciesMeta": {
+    "lighthouse": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "parse5": "8.0.1",
     "yaml": "2.9.1"
