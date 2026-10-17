@@ -1,4 +1,4 @@
-# PERFORMANCE.md format — version 1.0 (alpha draft)
+# PERFORMANCE.md format — version 1.0 (alpha)
 
 A `PERFORMANCE.md` file states what "fast enough" means for one surface (a website, an API, an app) and why. Its YAML front matter holds the rules, which a tool checks; the Markdown below it holds the reasons, which people and agents read. Nothing about the project is assumed: everything a check depends on is written in the file, given on the command line, or a default documented here.
 
