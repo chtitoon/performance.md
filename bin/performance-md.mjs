@@ -20,7 +20,7 @@ const COMMANDS = {
   },
   measure: {
     usage: 'measure <out> --head <path|url> [--base <path|url>] [--all | targets…]',
-    does: 'Run each measure tool into <out>/results.jsonl; given two builds, on the pages that differ',
+    does: 'Run each measure tool into <out>/results.jsonl; given two builds, on the pages a change can affect',
     options: { head: { type: 'string' }, base: { type: 'string' }, all: { type: 'boolean' } },
     required: ['head'],
     positionals: [1, Infinity],

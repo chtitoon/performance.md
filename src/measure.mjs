@@ -35,7 +35,7 @@ export async function runMeasure({ file, head, base, all = false } = {}, [out, .
     const changed = new Set(changedPages(sides[0].dist, sides[1].dist, { cleanUrls, hashedAssets: artifact.hashed_assets }));
     const count = targets.length;
     targets = targets.filter((target) => changed.has(target));
-    console.log(targets.length ? `Measuring the ${targets.length} of ${count} pages that differ from base: ${targets.join(' ')}` : 'No page differs from base: nothing to measure');
+    console.log(targets.length ? `Measuring the ${targets.length} of ${count} pages the changes from base can affect: ${targets.join(' ')}` : 'No page differs from base: nothing to measure');
   }
   // A page the base build lacks is new: it's measured on head only.
   const has = (side, target) => !side.dist || fileFor(side.dist, target, { cleanUrls }) !== undefined;
