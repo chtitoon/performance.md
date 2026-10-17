@@ -1,0 +1,16 @@
+On par with base.
+
+Lighthouse mobile, 5 runs per side, base → head, median unless noted.
+
+/
+  all: Score (worst) 100 · FCP 1.20 s · LCP 1.20 s · TBT 0 ms · CLS (worst) 0.000 · Transfer 59 KB
+
+/404
+  all: Score (worst) 100 · FCP 1.20 s · LCP 1.20 s · TBT 0 ms · CLS (worst) 0.000 · Transfer 58 KB
+
+/privacy
+  all: Score (worst) 100 · FCP 1.20 s · LCP 1.20 s · TBT 0 ms · CLS (worst) 0.001 · Transfer 59 KB
+
+/support
+  all: Score (worst) 100 · FCP 1.20 s · LCP 1.20 s · TBT 0 ms · CLS (worst) 0.000 · Transfer 58 KB
+
