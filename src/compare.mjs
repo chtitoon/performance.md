@@ -50,7 +50,7 @@ export function runCompare({ file, comment } = {}, [out] = [], cwd = process.cwd
       if (!mine.length) continue;
       lines.push(`${describe(measure)}, compared with the base.`);
       for (const target of [...new Set(mine.map((g) => g.target))]) {
-        lines.push('', `**${target}**`, ...mine.filter((g) => g.target === target).map((g) => `- ${meaningOf(g)}: ${format(g.before, g.metric)} → ${format(g.now, g.metric)}`));
+        lines.push('', `**${target}**`, ...mine.filter((g) => g.target === target).map((g) => `- 🟢 ${meaningOf(g)}: ${format(g.before, g.metric)} → ${format(g.now, g.metric)}`));
       }
     }
     writeFileSync(resolve(cwd, comment), `${lines.join('\n')}\n`);

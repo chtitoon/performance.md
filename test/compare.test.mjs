@@ -49,7 +49,7 @@ test('an improvement earns a comment, unless something else regressed', () => {
   const { status, stdout } = cli(['compare', 'out', '--comment', 'comment.md'], better);
   assert.equal(status, 0);
   assert.match(stdout, /^🟢 Better than base\.\n[\s\S]*  🟢 LCP 1\.50 s → 1\.40 s\n  same: Transfer 40 KB\n/);
-  assert.equal(readFileSync(join(better, 'comment.md'), 'utf8'), '<!-- performance-md:web -->\n### 🚀 web got better\nLighthouse mobile, 5 runs per side, compared with the base.\n\n**/**\n- Largest Contentful Paint (LCP): 1.50 s → 1.40 s\n');
+  assert.equal(readFileSync(join(better, 'comment.md'), 'utf8'), '<!-- performance-md:web -->\n### 🚀 web got better\nLighthouse mobile, 5 runs per side, compared with the base.\n\n**/**\n- 🟢 Largest Contentful Paint (LCP): 1.50 s → 1.40 s\n');
   const mixed = surface(entries, { 'base / lcp': [1500], 'head / lcp': [1400], 'base / transfer': [40960], 'head / transfer': [45056] });
   assert.equal(cli(['compare', 'out', '--comment', 'comment.md'], mixed).status, 1);
   assert.equal(existsSync(join(mixed, 'comment.md')), false);
