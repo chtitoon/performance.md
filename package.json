@@ -1,0 +1,26 @@
+{
+  "name": "performance-md",
+  "version": "0.1.0",
+  "description": "Checks and compares a surface against the budgets and limits in its PERFORMANCE.md",
+  "license": "MIT",
+  "type": "module",
+  "repository": "github:chtitoon/performance.md",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "performance-md": "bin/performance-md.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "schema.json",
+    "spec.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  }
+}
