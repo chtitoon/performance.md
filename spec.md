@@ -1,8 +1,8 @@
-# PERFORMANCE.md format — version 1 (alpha draft)
+# PERFORMANCE.md format — version 1.0 (alpha draft)
 
 A `PERFORMANCE.md` file states what "fast enough" means for one surface (a website, an API, an app) and why. Its YAML front matter holds the rules, which a tool checks; the Markdown below it holds the reasons, which people and agents read. Nothing about the project is assumed: everything a check depends on is written in the file, given on the command line, or a default documented here.
 
-Status: alpha. Version 1 may still change before the first tagged release; after that, the rules in [Compatibility](#compatibility) apply.
+Status: alpha. Version 1.0 may still change before the first tagged release; after that, the rules in [Compatibility](#compatibility) apply.
 
 ## The file
 
@@ -19,7 +19,7 @@ Status: alpha. Version 1 may still change before the first tagged release; after
 ## Front matter
 
 ```yaml
-version: 1      # required; the format version, not the tool's
+version: "1.0"  # required; the format version this file needs, as "major.minor" (see Compatibility)
 name: web       # optional; defaults to the folder name. Unique across a repository: results are keyed by it.
 artifact: {}    # optional; what the surface ships, and budgets on it
 measure: {}     # optional; how to measure it, and limits and comparisons on the results
@@ -89,7 +89,7 @@ metrics:
 Each entry is one statistic of one metric, with the rules on it:
 
 - `metric`: one the tool emits.
-- `stat`: one of `median`, `mean`, `min`, `max`, `worst` (the worst run in the metric's direction), `p<N>` (nearest-rank percentile, e.g. `p95`).
+- `stat`: one of `median` (with an even number of runs, the mean of the two middle values), `mean`, `min`, `max`, `worst` (the worst run in the metric's direction) or `p<N>` (nearest-rank percentile: the value at rank ⌈N/100 × runs⌉ in ascending order, e.g. `p95`). With fewer than 100 / (100 − N) runs, `p<N>` is simply the maximum, so `lint` warns: `p95` needs at least 20 runs to mean anything.
 - `limit`: the statistic over a target's runs must not be worse than this, in the metric's direction.
 - `delta`: when a base is measured too, how much worse than the base still counts as on par.
 
@@ -103,7 +103,7 @@ With a base, each entry with a `delta` compares head with base:
 
 A broken limit or a regression fails. Without a base, only limits are checked.
 
-Reserved for later, so adding them is not a breaking change: `objective` and `window` (production objectives such as 99.9% over 28 days) and `source` (`lab` in version 1, later `production`). Version 1 tools reject them with "not supported yet" rather than ignoring them, so no one thinks they are enforced.
+Reserved for later, so adding them is not a breaking change: `objective` and `window` (production objectives such as 99.9% over 28 days) and `source` (`lab` in version 1.0, later `production`). Until a version defines them, tools reject them with "not supported yet" rather than ignoring them, so no one thinks they are enforced.
 
 ### overrides
 
@@ -129,11 +129,11 @@ One list for every tool, so a metric means the same thing wherever it's measured
 | `latency` | time | lower | time from request to complete response |
 | `error_rate` | % | lower | share of requests that failed |
 
-No version 1 tool emits `latency` or `error_rate`; they are defined now so later tools can't define them differently.
+No version 1.0 tool emits `latency` or `error_rate`; they are defined now so later tools can't define them differently.
 
 ## Artifact types
 
-Version 1 defines `static-site`.
+Version 1.0 defines `static-site`.
 
 ### static-site
 
@@ -152,6 +152,8 @@ artifact:
 
 **Targets:** every `.html` file in `dist`, named by path (`/`, `/privacy`).
 
+**Changed pages** (for `changed`): a page changed if its HTML differs. Files matching `hashed_assets` are skipped, because a change to one changes its name and so the HTML that links it. Any other file that differs, appears or disappears (a `favicon.svg`, say) counts as a change to every page.
+
 **What counts as a page's download:** the HTML; stylesheets it links and inline `<style>`; scripts it loads; images in `<img src>` (and `srcset`: the largest candidate, an upper bound); `<link rel="preload|icon">`; and, from CSS, `url()` references and the first `src` of each `@font-face` that the `fonts` rule selects. All weights of a matching family count (an upper bound). Sizes are uncompressed bytes on disk; `transfer` in `measure` is the compressed counterpart.
 
 **Budgets:**
@@ -167,7 +169,7 @@ artifact:
 
 ## Tools
 
-Version 1 defines `lighthouse`. `command` is reserved: a later version may run any command that writes [results](#results), with metrics the file declares.
+Version 1.0 defines `lighthouse`. `command` is reserved: a later version may run any command that writes [results](#results), with metrics the file declares.
 
 ### lighthouse
 
@@ -178,10 +180,13 @@ measure:
 ```
 
 **Measures against:** a `static-site` build (served locally, text compressed) or a URL.
-**Targets:** the artifact's, when measuring a build; when measuring a URL, the paths given on the command line, or `/`.
+**Targets:** the artifact's pages, whether measuring a build or a URL, so a check of the live site covers every page too. With no `artifact`, the paths given on the command line, or `/`.
 **Emits:** `score`, `fcp`, `lcp`, `tbt`, `cls`, `transfer`.
+**Version:** the CLI pins the Lighthouse version it runs and records it, with the browser's, in every result. Scores shift between Lighthouse and Chrome versions, so upgrading the CLI is a deliberate change: comparisons stay fair (both sides run on the same versions), but absolute limits may need a look.
 
 ## Commands
+
+Planned: the CLI isn't published yet. This section is what it will implement.
 
 | Command | Does | Exit |
 |---------|------|------|
@@ -198,20 +203,24 @@ Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies
 `measure` writes one JSON object per line to `<out>/results.jsonl`. `compare` reads only this, so a new tool needs no change to it:
 
 ```json
-{"name":"web","tool":"lighthouse","side":"head","target":"/","run":1,"metric":"lcp","value":1432,"unit":"ms"}
+{"name":"web","tool":"lighthouse","tool_version":"12.6.1","browser":"Chrome/141.0.7390.54","side":"head","target":"/","run":1,"metric":"lcp","value":1432,"unit":"ms"}
 ```
+
+`compare` refuses to compare base and head results recorded with different tool or browser versions.
 
 ## Compatibility
 
-- Within version 1, changes are additive: new artifact types, tools, metrics, stats and optional fields. The meaning of an existing key never changes.
-- A tool that meets an artifact type, tool, metric or field it doesn't know fails with the version it needs. It never skips: a skipped check reads as a pass.
+- `version` is a quoted string, `"major.minor"`: unquoted, YAML would read `1.10` as the number 1.1.
+- Within a major version, each minor version only adds: new artifact types, tools, metrics, stats and optional fields. The meaning of an existing key never changes. A new major version is for anything else.
+- A file declares the lowest version that has everything it uses; `lint` says which that is. A tool supports one major version up to some minor; given a file that needs a later minor or another major, it fails with "this file needs 1.2; this tool supports up to 1.1". An old tool can't recognise a future field on its own, which is why the file declares its version.
+- A tool never skips what it doesn't understand: a skipped check reads as a pass. Unknown types, tools, metrics or fields are errors, even in a file whose version the tool supports.
 - Reserved for later minor versions: `surfaces` (several surfaces in one file), `extends` (shared defaults), `artifact.exclude`, `tool: command`, and the production fields of a `metrics` entry above.
 
 ## Example
 
 ```yaml
 ---
-version: 1
+version: "1.0"
 artifact:
   type: static-site
   dist: dist
