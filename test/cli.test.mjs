@@ -46,11 +46,12 @@ test('lint --all checks every file below and that names are unique', () => {
   assert.equal(cli(['lint', '--all'], folder({})).status, 1);
 });
 
-test('usage errors exit 2; commands of later slices exit 1', () => {
+test('usage errors exit 2', () => {
   assert.equal(cli([]).status, 2);
   assert.equal(cli(['--help']).status, 0);
   assert.equal(cli(['frobnicate']).status, 2);
   assert.equal(cli(['lint', '--nope']).status, 2);
   assert.equal(cli(['lint', '--all', '--file', 'x']).status, 2);
-  assert.equal(cli(['compare', 'out']).status, 1);
+  assert.equal(cli(['compare']).status, 2);
+  assert.equal(cli(['compare', 'a', 'b']).status, 2);
 });

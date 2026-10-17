@@ -1,7 +1,7 @@
 // Quantities: a number, an optional space and a unit (`175 KB`, `2.5 s`, `2%`, `0.1`).
 // Values are kept in one base unit per dimension (B, ms, %) so limits and results compare directly.
 
-const UNITS = {
+export const UNITS = {
   B: { dimension: 'bytes', factor: 1 },
   KB: { dimension: 'bytes', factor: 1024 },
   MB: { dimension: 'bytes', factor: 1024 * 1024 },

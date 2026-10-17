@@ -31,7 +31,13 @@ const COMMANDS = {
     positionals: [1, Infinity],
     run: async (values, positionals) => (await import('../src/measure.mjs')).runMeasure(values, positionals),
   },
-  compare: { usage: 'compare <out> [--comment <file>]', does: 'Check metrics limits and deltas on the results' },
+  compare: {
+    usage: 'compare <out> [--comment <file>]',
+    does: 'Check metrics limits and deltas on <out>/results.jsonl',
+    options: { comment: { type: 'string' } },
+    positionals: [1, 1],
+    run: async (values, positionals) => (await import('../src/compare.mjs')).runCompare(values, positionals),
+  },
 };
 
 const USAGE = `Usage: performance-md <command> [--file <path>]
@@ -56,11 +62,6 @@ if (!command) {
   process.stderr.write(`performance-md: unknown command ${name}\n\n${USAGE}`);
   process.exit(2);
 }
-if (!command.run) {
-  console.error(`performance-md ${name}: not implemented yet in this version`);
-  process.exit(1);
-}
-
 let args;
 try {
   args = parseArgs({ args: rest, options: { file: { type: 'string' }, ...command.options }, allowPositionals: Boolean(command.positionals) });
