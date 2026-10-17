@@ -51,6 +51,7 @@ Status: alpha. The format is in [spec.md](spec.md). MIT licensed.
 - **Rules and reasons in one file.** A `lighthouserc` or `.size-limit.json` holds numbers; why they are what they are lives somewhere else, if anywhere. Here the reason sits under the rule, where the next person, or agent, about to break it will read it.
 - **Noise-aware comparison against the base.** Absolute limits catch a bad page; comparison catches drift, ten small changes that each add 50 ms. `compare` fails only when a metric got worse than the base by more than both its `delta` and the measurement's `noise`, so a noisy run neither fails a PR nor earns it praise. Lighthouse CI asserts against fixed thresholds, and its build diffs need the LHCI server.
 - **Budgets with no browser.** `check` reads the built site and adds up what each page downloads: HTML, CSS, scripts, images, and only the fonts its text uses. It's fast and deterministic enough for a deploy gate. size-limit sizes the files you list; it doesn't know what each page loads.
+- **Not only for the web.** Lighthouse CI and size-limit are web tools. A `PERFORMANCE.md` describes any surface: a website, an API, an app. Version 1.0 defines static sites and Lighthouse; `latency` and `error_rate` are already defined, and `tool: command` (any command that writes results) is reserved, so APIs and apps fit later without a breaking change.
 
 ## Quickstart
 
