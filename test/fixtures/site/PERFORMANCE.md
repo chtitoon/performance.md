@@ -12,11 +12,11 @@ artifact:
     html: 2 KB
     js: 0 B
   rules:
-    image_formats: [svg, webp]
+    image_formats: [svg, webp, avif]
     image_dimensions: true
     origins: [self]
   overrides:
-    /privacy: { budgets: { html: 3 KB }, rules: { origins: [self, https://cdn.example.com] } }
+    /privacy: { budgets: { html: 3 KB, js: 1 KB }, rules: { origins: [self, https://cdn.example.com] } }
 measure:
   tool: lighthouse
   preset: mobile
