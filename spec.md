@@ -139,6 +139,8 @@ No version 1.0 tool emits `latency` or `error_rate`; they are defined now so lat
 
 ## Artifact types
 
+Each type defines its targets, how `measure` serves a build of it, and which targets changed between two builds. A type that can't tell which targets a change affects counts any change as affecting every target.
+
 Version 1.0 defines `static-site`.
 
 ### static-site
