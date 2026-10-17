@@ -197,7 +197,7 @@ measure:
 
 ## Commands
 
-Planned: the CLI isn't published yet. This section is what it will implement.
+The `performance-md` CLI in this repository implements this section. It isn't on npm yet: install it from a commit (see the README).
 
 | Command | Does | Exit |
 |---------|------|------|

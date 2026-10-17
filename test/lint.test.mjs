@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { readFile } from '../src/file.mjs';
 import { lint } from '../src/lint.mjs';
-import { fixtures, folder, specExample } from './helpers.mjs';
+import { fixtures, folder, readmeExample, specExample } from './helpers.mjs';
 
 // Lints front matter given as YAML lines (the --- lines are added). Extra files go next to it.
 function lintYaml(yaml, { files = {}, strict } = {}) {
@@ -24,9 +24,11 @@ measure:
   metrics:
 ${metrics.map((m) => `    - ${m}`).join('\n')}`;
 
-test('the spec example and the fixture site lint clean', () => {
-  const example = lint(readFile(join(folder({ 'PERFORMANCE.md': specExample() }), 'PERFORMANCE.md')));
-  assert.deepEqual([example.errors, example.warnings, example.needs], [[], [], '1.0']);
+test('the spec and README examples and the fixture site lint clean', () => {
+  for (const content of [specExample(), readmeExample()]) {
+    const example = lint(readFile(join(folder({ 'PERFORMANCE.md': content }), 'PERFORMANCE.md')));
+    assert.deepEqual([example.errors, example.warnings, example.needs], [[], [], '1.0']);
+  }
   const fixture = lint(readFile(join(fixtures, 'site/PERFORMANCE.md')), { strict: true });
   assert.deepEqual([fixture.errors, fixture.warnings, fixture.name], [[], [], 'site']);
 });
