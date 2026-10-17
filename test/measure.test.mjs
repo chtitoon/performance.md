@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { browserOf, checkVersion, readReport } from '../src/lighthouse.mjs';
 import { runMeasure } from '../src/measure.mjs';
@@ -88,6 +88,39 @@ test('measure alternates base and head, run by run, and measures a new page on h
   assert.match(readFileSync(join(dir, 'out/lighthouse/head_privacy-2.json'), 'utf8'), /^\{"url":"http:\/\/127\.0\.0\.1:\d+\/privacy"\}$/);
 });
 
+test('given two builds, only the pages that differ are measured, unless --all', async () => {
+  const dir = site('  runs: 1');
+  cpSync(join(dir, 'dist'), join(dir, 'base'), { recursive: true });
+  writeFileSync(join(dir, 'base/privacy.html'), 'an older privacy page');
+  const changed = fakeRunner();
+  await quietly(() => runMeasure({ head: 'dist', base: 'base' }, ['out'], dir, changed.runners));
+  assert.deepEqual(changed.calls.slice(1, -1), ['mobile http://local/privacy', 'mobile http://local/privacy']);
+  const all = fakeRunner();
+  await quietly(() => runMeasure({ head: 'dist', base: 'base', all: true }, ['out'], dir, all.runners));
+  assert.equal(all.calls.length, 2 + 4 * 2);
+  // A URL can't be compared file by file, so every page is measured.
+  const url = fakeRunner();
+  await quietly(() => runMeasure({ head: 'dist', base: 'https://example.com' }, ['out'], dir, url.runners));
+  assert.equal(url.calls.length, 2 + 4 * 2);
+});
+
+test('when no page differs, nothing runs and the results are empty', async () => {
+  const dir = site('  runs: 1');
+  cpSync(join(dir, 'dist'), join(dir, 'base'), { recursive: true });
+  const { calls, runners } = fakeRunner();
+  const logged = [];
+  const log = console.log;
+  console.log = (line) => logged.push(line);
+  try {
+    assert.equal(await runMeasure({ head: 'dist', base: 'base' }, ['out'], dir, runners), 0);
+  } finally {
+    console.log = log;
+  }
+  assert.deepEqual(calls, []); // not even started: no Lighthouse needed
+  assert.equal(readFileSync(join(dir, 'out/results.jsonl'), 'utf8'), '');
+  assert.deepEqual(logged, ['No page differs from base: nothing to measure']);
+});
+
 test('targets are every page of the artifact by default, also when measuring a URL', async () => {
   const dir = site('  runs: 1');
   const { calls, runners } = fakeRunner();
@@ -163,6 +196,7 @@ test('measure usage', () => {
   const cli = (args) => spawnSync(process.execPath, [join(root, 'bin/performance-md.mjs'), ...args], { cwd: root, encoding: 'utf8' });
   assert.match(cli(['measure', 'out']).stderr, /--head is required/);
   assert.match(cli(['measure', '--head', 'dist']).stderr, /expected at least 1 argument, got 0/);
+  assert.deepEqual([cli(['measure', 'out', '--head', 'dist', '--all', '/']).status, cli(['measure', 'out', '--head', 'dist', '--all', '/']).stderr], [2, 'performance-md measure: give --all or targets, not both\n']);
 });
 
 function canResolve(name) {

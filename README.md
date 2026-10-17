@@ -81,12 +81,14 @@ npx performance-md measure results --base ../main/dist --head dist
 npx performance-md compare results --comment comment.md
 ```
 
+Given two builds, `measure` skips the pages a change can't have affected, since identical files give identical results. It measures pages whose HTML differs (new pages too), and every page when a file shared by pages, other than a [hashed asset](spec.md#static-site), differs: a new `favicon.svg` could change any of them. `--all` measures every page.
+
 ## Use in CI
 
 Two checks, each where it fits:
 
 - **Deploy gate:** add `performance-md check` after your build (for example in `npm test`). It needs no browser, so a host's build can run it.
-- **Pull requests:** build the base and the PR, measure the pages that differ, and compare. The CLI never talks to GitHub: `compare` prints a report and, when something got better and nothing got worse, writes a comment file for your workflow to post.
+- **Pull requests:** build the base and the PR, measure the pages a change can affect, and compare. The CLI never talks to GitHub: `compare` prints a report and, when something got better and nothing got worse, writes a comment file for your workflow to post.
 
 A GitHub Actions job for a site at the repository root, with `performance-md` in its devDependencies:
 
@@ -110,25 +112,14 @@ jobs:
       - name: Build both
         run: for side in base head; do (cd "$side" && npm ci && npm run build); done
 
-      # Identical files give identical results, so only pages that differ are measured.
-      - name: Find changed pages
-        id: pages
-        working-directory: head
-        run: echo "list=$(npx performance-md changed ../base/dist dist | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
-
-      # With no pages given, measure takes every page: skip it when nothing changed.
+      # Only the pages a change can affect; with none, compare reports that nothing changed.
       - name: Measure
-        if: steps.pages.outputs.list != ''
         working-directory: head
-        env:
-          PAGES: ${{ steps.pages.outputs.list }} # through env, never ${{ }} in the script: page names come from the PR
         run: |
           npm install --no-save lighthouse@12.6.1
-          # shellcheck disable=SC2086 # one argument per page
-          npx performance-md measure ../results --base ../base/dist --head dist $PAGES
+          npx performance-md measure ../results --base ../base/dist --head dist
 
       - name: Compare
-        if: steps.pages.outputs.list != ''
         working-directory: head
         run: |
           set +e
@@ -155,7 +146,7 @@ jobs:
           fi
 
       - uses: actions/upload-artifact@v4 # results.jsonl and each run's Lighthouse report
-        if: ${{ !cancelled() && steps.pages.outputs.list != '' }}
+        if: ${{ !cancelled() }}
         with: { name: performance, path: results }
 ```
 
@@ -167,8 +158,7 @@ For a site in a subfolder, add it to the paths (`head/apps/web`, `../../../base/
 |---------|------|------|
 | `lint [--strict] [--all]` | Checks the file against the spec | 1 on any error |
 | `check [--dist <path>] [--report]` | Checks `artifact.budgets` and `artifact.rules` on the build | 1 on any broken budget or rule |
-| `changed <base> <head>` | Prints the pages that differ between two builds | 0 |
-| `measure <out> --head <path\|url> [--base <path\|url>] [targets…]` | Runs Lighthouse, alternating base and head, into `<out>/results.jsonl` | 1 if a run fails |
+| `measure <out> --head <path\|url> [--base <path\|url>] [--all \| targets…]` | Runs Lighthouse, alternating base and head, into `<out>/results.jsonl`; given two builds, only on the pages a change can affect | 1 if a run fails |
 | `compare <out> [--comment <file>]` | Checks limits on head and deltas against base | 1 on any broken limit or regression |
 
 Every command finds the nearest `PERFORMANCE.md` from the current folder upwards, or takes `--file <path>`. Usage errors exit 2. Requires Node 22 or later.

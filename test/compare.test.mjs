@@ -112,6 +112,12 @@ test('results it cannot trust are refused', () => {
   assert.match(cli(['compare', 'nowhere'], surface(entry, {})).stderr, /nowhere\/results.jsonl doesn't exist; run performance-md measure first/);
 });
 
+test('empty results, from a measure that found no page changed, pass without a comment', () => {
+  const dir = surface(lcp('{ metric: lcp, stat: median, limit: 2 s }'), {});
+  assert.deepEqual(cli(['compare', 'out', '--comment', 'comment.md'], dir), { status: 0, stdout: 'Nothing measured: no page differs from base.\n', stderr: '' });
+  assert.equal(existsSync(join(dir, 'comment.md')), false);
+});
+
 test('a value in another unit of the same dimension is converted', () => {
   const dir = surface(lcp('{ metric: lcp, stat: median, limit: 2 s }'), {}, {
     extra: [JSON.stringify({ name: 'web', tool: 'lighthouse', tool_version: '12.6.1', browser: 'Chrome/155.0.8059.84', side: 'head', target: '/', run: 1, metric: 'lcp', value: 2.5, unit: 's' })],

@@ -26,7 +26,13 @@ export function runCompare({ file, comment } = {}, [out] = [], cwd = process.cwd
   if (!measures.length) throw new Failure(`${performance.shown} has no measure, so nothing to compare`);
   const path = join(resolve(cwd, out), 'results.jsonl');
   if (!existsSync(path)) throw new Failure(`${shown(path, cwd)} doesn't exist; run performance-md measure first`);
-  const results = readResults(path, cwd).filter((r) => r.name === name);
+  const all = readResults(path, cwd);
+  // Empty: measure found no page that differs from base, so nothing can have regressed (spec: Results).
+  if (!all.length) {
+    console.log('Nothing measured: no page differs from base.');
+    return 0;
+  }
+  const results = all.filter((r) => r.name === name);
   if (!results.length) throw new Failure(`${shown(path, cwd)} has no results for ${name}`);
 
   const sections = [];

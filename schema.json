@@ -76,7 +76,7 @@
           "patternProperties": { "^x-": true },
           "additionalProperties": false
         },
-        "hashed_assets": { "description": "Glob of content-hashed files, used by `changed`. Default none.", "type": "string", "minLength": 1 },
+        "hashed_assets": { "description": "Glob of content-hashed files, used to find changed pages. Default none.", "type": "string", "minLength": 1 },
         "fonts": {
           "description": "Count a @font-face only if the page uses characters in its range (default), or all of them.",
           "enum": ["unicode-range", "all"]
