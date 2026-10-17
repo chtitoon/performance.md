@@ -1,14 +1,13 @@
 // `performance-md check`: every page of the built site against artifact.budgets and artifact.rules.
 // No browser and no network: it reads the built files and adds up what each page makes the browser
 // download. `--report` prints each page's measured sizes, used to set the budgets.
-// Ported from Hutch's check-performance.mjs.
 import { join, resolve } from 'node:path';
 import { formatBytes, parseQuantity } from './quantity.mjs';
 import { display } from './lint.mjs';
 import { Failure, folder, open } from './open.mjs';
 import { imageFormat, measurePage, pages } from './static-site.mjs';
 
-const SIZES = ['html', 'css', 'fonts', 'images', 'js', 'total']; // Hutch's report columns, in order
+const SIZES = ['html', 'css', 'fonts', 'images', 'js', 'total']; // the report's columns, in order
 
 export function runCheck({ file, dist, report = false } = {}, cwd = process.cwd()) {
   const performance = open(file, cwd);

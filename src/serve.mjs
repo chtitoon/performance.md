@@ -1,6 +1,6 @@
 // Serving a static-site build for `measure`, the way a host like Cloudflare Pages does: URL paths
 // find files by the artifact's routes, and text is compressed, so Lighthouse sees realistic
-// transfer sizes. Ported from Hutch's run-lighthouse.mjs.
+// transfer sizes.
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';

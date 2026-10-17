@@ -1,6 +1,5 @@
 // `performance-md changed <base> <head>`: the targets whose artifact differs between two builds, one
 // per line, so a pull request measures only what it changed: identical files give identical results.
-// Ported from Hutch's `compare-performance.mjs --changed`.
 import { resolve } from 'node:path';
 import { Failure, folder, open } from './open.mjs';
 import { changedPages } from './static-site.mjs';

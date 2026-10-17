@@ -1,5 +1,4 @@
 // The static-site artifact type: a site built to a folder of files (spec: Artifact types).
-// Ported from Hutch's check-performance.mjs, reading HTML with parse5 instead of regexes.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, matchesGlob, posix, sep } from 'node:path';
 import { parse } from 'parse5';

@@ -81,7 +81,85 @@ npx performance-md measure results --base ../main/dist --head dist
 npx performance-md compare results --comment comment.md
 ```
 
-In a pull request's CI, `changed <base> <head>` lists the pages whose files differ, so only those are measured. `compare` writes `comment.md` only when something got better and nothing got worse; posting it is up to your workflow.
+## Use in CI
+
+Two checks, each where it fits:
+
+- **Deploy gate:** add `performance-md check` after your build (for example in `npm test`). It needs no browser, so a host's build can run it.
+- **Pull requests:** build the base and the PR, measure the pages that differ, and compare. The CLI never talks to GitHub: `compare` prints a report and, when something got better and nothing got worse, writes a comment file for your workflow to post.
+
+A GitHub Actions job for a site at the repository root, with `performance-md` in its devDependencies:
+
+```yaml
+name: Performance
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write # to post the comment
+jobs:
+  measure:
+    name: Validate Page Speed
+    runs-on: ubuntu-latest # has Chrome
+    steps:
+      - uses: actions/checkout@v5
+        with: { path: head }
+      - uses: actions/checkout@v5
+        with: { path: base, ref: "${{ github.event.pull_request.base.sha }}" }
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - name: Build both
+        run: for side in base head; do (cd "$side" && npm ci && npm run build); done
+
+      # Identical files give identical results, so only pages that differ are measured.
+      - name: Find changed pages
+        id: pages
+        working-directory: head
+        run: echo "list=$(npx performance-md changed ../base/dist dist | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+      # With no pages given, measure takes every page: skip it when nothing changed.
+      - name: Measure
+        if: steps.pages.outputs.list != ''
+        working-directory: head
+        env:
+          PAGES: ${{ steps.pages.outputs.list }} # through env, never ${{ }} in the script: page names come from the PR
+        run: |
+          npm install --no-save lighthouse@12.6.1
+          # shellcheck disable=SC2086 # one argument per page
+          npx performance-md measure ../results --base ../base/dist --head dist $PAGES
+
+      - name: Compare
+        if: steps.pages.outputs.list != ''
+        working-directory: head
+        run: |
+          set +e
+          npx performance-md compare ../results --comment ../comment.md > ../report.txt
+          status=$?
+          cat ../report.txt
+          { echo '```text'; cat ../report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      # One comment, found by its marker: updated on each push, removed if the gain disappears.
+      - name: Post or remove the comment
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MARKER: "<!-- performance-md:web -->" # web: the `name` in PERFORMANCE.md, or its folder's name
+          COMMENTS: repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments
+        run: |
+          existing=$(gh api "$COMMENTS" --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -f comment.md ]; then
+            if [ -n "$existing" ]; then gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$existing" -F body=@comment.md > /dev/null
+            else gh api "$COMMENTS" -F body=@comment.md > /dev/null; fi
+          elif [ -n "$existing" ]; then
+            gh api -X DELETE "repos/${{ github.repository }}/issues/comments/$existing"
+          fi
+
+      - uses: actions/upload-artifact@v4 # results.jsonl and each run's Lighthouse report
+        if: ${{ !cancelled() && steps.pages.outputs.list != '' }}
+        with: { name: performance, path: results }
+```
+
+For a site in a subfolder, add it to the paths (`head/apps/web`, `../../../base/apps/web/dist`); `measure` and `compare` take paths relative to where they run.
 
 ## Commands
 

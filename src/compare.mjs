@@ -1,7 +1,7 @@
 // `performance-md compare <out> [--comment <file>]`: checks each metrics limit on head and, when base
 // results exist, each delta, from <out>/results.jsonl alone (spec: Commands, Results). Prints a
 // plain-text report, short enough to read in a job log or on a phone, and writes <file> only when
-// something improved and nothing regressed. Ported from Hutch's compare-performance.mjs.
+// something improved and nothing regressed.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Failure, open, shown } from './open.mjs';

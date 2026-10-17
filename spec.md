@@ -237,7 +237,7 @@ version: "1.0"
 artifact:
   type: static-site
   dist: dist
-  origin: https://myhutch.app
+  origin: https://example.com
   routes: { clean_urls: true }
   hashed_assets: "_astro/**"
   budgets:

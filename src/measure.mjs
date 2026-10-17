@@ -2,7 +2,7 @@
 // measure tool on every target, `runs` times per side, and writes one line per metric per run to
 // <out>/results.jsonl (spec: Results). A path is a build, served following the artifact settings; a
 // URL is a running server. With a base, runs alternate base and head so a slow moment on the
-// machine hits both alike. Ported from Hutch's run-lighthouse.mjs.
+// machine hits both alike.
 import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Failure, folder, open, shown } from './open.mjs';
