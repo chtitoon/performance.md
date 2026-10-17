@@ -1,6 +1,6 @@
 # PERFORMANCE.md format — version 1 (alpha draft)
 
-A `PERFORMANCE.md` file states what "fast enough" means for one surface (a website, an API, an app) and why. Its YAML front matter holds the rules, which a tool checks; the Markdown below it holds the reasons, which people and agents read. Nothing about the project is assumed: everything the checks depend on is either written in the file or a default documented here.
+A `PERFORMANCE.md` file states what "fast enough" means for one surface (a website, an API, an app) and why. Its YAML front matter holds the rules, which a tool checks; the Markdown below it holds the reasons, which people and agents read. Nothing about the project is assumed: everything a check depends on is written in the file, given on the command line, or a default documented here.
 
 Status: alpha. Version 1 may still change before the first tagged release; after that, the rules in [Compatibility](#compatibility) apply.
 
@@ -12,22 +12,20 @@ Status: alpha. Version 1 may still change before the first tagged release; after
 - Every path in the file is relative to the file's own folder.
 - Tools find the nearest `PERFORMANCE.md` from the current folder upwards, unless given `--file`.
 
+## What goes in the file, and what doesn't
+
+**A value goes in the file if it belongs to the surface; it goes on the command line if it changes with the occasion.** The limits, how the build is served and which tool measures it belong to the surface. Which build or URL is measured, which is the base and which the head, and which pages to measure this time change with the occasion: a pull request, a release, a scheduled check of the live site. Every new field is held to this test.
+
 ## Front matter
 
 ```yaml
-version: 1             # required; the format version, not the tool's
-kind: web              # required; see Kinds
-name: web              # optional; defaults to the folder name. Unique across a repository.
-artifact: {}           # what to inspect; fields depend on kind
-targets: []            # what to check: pages, endpoints, screens. Default: depends on kind
-budgets: {}            # limits on the artifact, checked without running it
-measure: {}            # how to collect measured runs
-slos: []               # limits on statistics over measured runs
-compare: {}            # regression rules against a baseline
-overrides: {}          # per-target changes to budgets, slos or compare
+version: 1      # required; the format version, not the tool's
+name: web       # optional; defaults to the folder name. Unique across a repository: results are keyed by it.
+artifact: {}    # optional; what the surface ships, and budgets on it
+measure: {}     # optional; how to measure it, and SLOs and comparisons on the results
 ```
 
-Unknown top-level keys are an error, except keys starting with `x-`, which tools ignore.
+A file has `artifact`, `measure` or both. Unknown keys are an error at every level, except keys starting with `x-`, which tools ignore.
 
 ### Quantities
 
@@ -38,22 +36,47 @@ Every limit carries its unit, so a wrong unit is a lint error rather than a sile
 | `B`, `KB`, `MB` | bytes; **1 KB = 1024 B**, 1 MB = 1024 KB |
 | `ms`, `s` | time |
 | `%` | percentage (of a ratio, or of a baseline in `compare.noise`) |
-| none | unitless (Lighthouse score 0–100, CLS) |
+| none | unitless (a score, CLS) |
 
-Written as a number, an optional space and the unit: `175 KB`, `2.5 s`, `0.1`, `2%`. A metric only accepts units of its own dimension.
+Written as a number, an optional space and the unit: `175 KB`, `2.5 s`, `0.1`, `2%`. A metric or budget only accepts units of its own dimension.
 
-### budgets
+### Targets
 
-Fixed limits on what the surface ships, read from the artifact without running it: deterministic, so they fit a deploy gate. Each kind defines its budget keys (see Kinds). A budget that isn't written isn't checked.
+A target is one thing checked: a page, an endpoint, a screen. Targets are never listed at the top of the file. They come from the artifact (a static site's pages are its HTML files) or from the tool's own settings when they can't be found automatically (an API's endpoints). Deriving them means a new page is checked without anyone remembering to add it. A run can narrow them on the command line.
 
-### measure
+`overrides`, in either section, are keyed by target. Overriding a target that doesn't exist is an error.
+
+## artifact
+
+What the surface ships, read without running it. Budgets here are deterministic, so they fit a deploy gate.
+
+```yaml
+artifact:
+  type: static-site   # required; decides the other settings, what a target is and which budget keys exist
+  # settings of the type
+  budgets: {}         # limits, applied to every target
+  overrides: {}       # per target: budget keys that replace the file's
+```
+
+A budget that isn't written isn't checked.
+
+## measure
+
+How the surface is measured, and the limits on what's measured.
 
 ```yaml
 measure:
-  tool: lighthouse     # required if slos or compare are present; see Kinds for each kind's tools
-  runs: 7              # per side when comparing; default 5
-  # tool-specific options
+  tool: lighthouse    # required; decides the other settings and which metrics exist
+  runs: 7             # per side when comparing; default 5
+  # settings of the tool
+  slos: []
+  compare: {}
+  overrides: {}       # per target: `slos` and `compare`, merged over the file's
 ```
+
+`measure` may also be a list of these, one per tool. Each entry's `slos` and `compare` apply to its own tool's results only.
+
+What is measured is given on the command line: a path is a build, served locally following the `artifact` settings (so it needs an `artifact`); a URL is a running server.
 
 ### slos
 
@@ -62,11 +85,11 @@ slos:
   - { metric: lcp, stat: median, limit: 2.5 s }
 ```
 
-Each entry: `metric` (from the kind's metric list), `stat` and `limit`. A target fails if the statistic over its runs is worse than the limit; "worse" follows the metric's direction (most are lower-is-better).
+Each entry: `metric` (one the tool emits), `stat` and `limit`. A target fails if the statistic over its runs is worse than the limit, in the metric's direction.
 
 `stat` is one of: `median`, `mean`, `min`, `max`, `worst` (the worst run in the metric's direction), `p<N>` (nearest-rank percentile, e.g. `p95`).
 
-Reserved for later, so adding them is not a breaking change: `objective` and `window` (production SLOs such as 99.9% over 28 days) and `source` (`lab`, the only value in version 1, or later `production`). Version 1 tools reject them with "not supported yet" rather than ignoring them, so no one thinks they are enforced.
+Reserved for later, so adding them is not a breaking change: `objective` and `window` (production SLOs such as 99.9% over 28 days) and `source` (`lab` in version 1, later `production`). Version 1 tools reject them with "not supported yet" rather than ignoring them, so no one thinks they are enforced.
 
 ### compare
 
@@ -76,7 +99,7 @@ compare:
   thresholds: { lcp: 50 ms, cls: 0.01 }
 ```
 
-Compares a head (a pull request) with a base (main), measured the same way. For each target and each metric in `thresholds`, using the same `stat` as that metric's SLO (`median` if it has none):
+Compares a head (a pull request, say) with a base (main), measured the same way. For each target and each metric in `thresholds`, using the same `stat` as that metric's SLO (`median` if it has none):
 
 - **regressed** if it got worse by more than both its threshold and `noise` × the base value;
 - **improved** if it got better by more than both;
@@ -88,21 +111,39 @@ Any regression fails the comparison. A metric not in `thresholds` isn't compared
 
 ```yaml
 overrides:
-  /pricing: { budgets: { js: 10 KB } }
+  /pricing: { slos: [{ metric: lcp, stat: median, limit: 3 s }] }
 ```
 
-Keyed by target. Each value may hold `budgets`, `slos` or `compare`, merged over the file's: a budget key replaces the same key; an SLO replaces the file's entry with the same `metric` and `stat`. Overriding a target that doesn't exist is an error.
+An SLO replaces the file's entry with the same `metric` and `stat`; a `compare` key replaces the same key.
 
-## Kinds
+## Metrics
 
-A kind names what is measured and defines its `artifact` fields, default `targets`, budget keys, metrics and measurement tools. Version 1 defines `web`. `api` and `ios` are reserved names.
+One list for every tool, so a metric means the same thing wherever it's measured. A tool declares which of these it emits; a new metric is added here, never redefined by a tool.
 
-### web
+| Metric | Dimension | Better | Meaning |
+|--------|-----------|--------|---------|
+| `score` | unitless, 0–100 | higher | Lighthouse performance score |
+| `fcp` | time | lower | First Contentful Paint |
+| `lcp` | time | lower | Largest Contentful Paint |
+| `tbt` | time | lower | Total Blocking Time |
+| `cls` | unitless | lower | Cumulative Layout Shift |
+| `transfer` | bytes | lower | bytes over the network, as transferred (compressed) |
+| `latency` | time | lower | time from request to complete response |
+| `error_rate` | % | lower | share of requests that failed |
 
-A static site built to a folder.
+No version 1 tool emits `latency` or `error_rate`; they are defined now so later tools can't define them differently.
+
+## Artifact types
+
+Version 1 defines `static-site`.
+
+### static-site
+
+A site built to a folder of files.
 
 ```yaml
 artifact:
+  type: static-site
   dist: dist                  # required; the built site
   origin: https://example.com # required; the site's own origin
   routes:
@@ -111,11 +152,11 @@ artifact:
   fonts: unicode-range        # count a @font-face only if the page uses characters in its range (default), or `all`
 ```
 
-**targets:** paths such as `/` or `/privacy`. Default: every `.html` file in `dist`.
+**Targets:** every `.html` file in `dist`, named by path (`/`, `/privacy`).
 
-**What counts as a page's download:** the HTML; stylesheets it links and inline `<style>`; scripts it loads; images in `<img src>` (and `srcset`: the largest candidate, an upper bound); `<link rel="preload|icon">`; and, from CSS, `url()` references and the first `src` of each `@font-face` that the `fonts` rule selects. All weights of a matching family count (an upper bound). Sizes are uncompressed bytes on disk.
+**What counts as a page's download:** the HTML; stylesheets it links and inline `<style>`; scripts it loads; images in `<img src>` (and `srcset`: the largest candidate, an upper bound); `<link rel="preload|icon">`; and, from CSS, `url()` references and the first `src` of each `@font-face` that the `fonts` rule selects. All weights of a matching family count (an upper bound). Sizes are uncompressed bytes on disk; `transfer` in `measure` is the compressed counterpart.
 
-**budgets:**
+**Budgets:**
 
 | Key | Limits |
 |-----|--------|
@@ -126,68 +167,83 @@ artifact:
 | `image_dimensions` | `true`: every `<img>` has `width` and `height` |
 | `origins` | where resources may load from: `self` and any other origins listed. Plain links don't count. |
 
-**measure tools:** `lighthouse`, options `preset` (`mobile` default, or `desktop`). The tool serves `dist` locally following `routes`, with text compressed.
+## Tools
 
-**metrics:** `score` (higher is better, 0–100), `fcp`, `lcp`, `tbt` (time), `cls` (unitless), `transfer` (bytes as transferred, compressed).
+Version 1 defines `lighthouse`. `command` is reserved: a later version may run any command that writes [results](#results), with metrics the file declares.
+
+### lighthouse
+
+```yaml
+measure:
+  tool: lighthouse
+  preset: mobile              # or desktop; default mobile
+```
+
+**Measures against:** a `static-site` build (served locally, text compressed) or a URL.
+**Targets:** the artifact's, when measuring a build; when measuring a URL, the paths given on the command line, or `/`.
+**Emits:** `score`, `fcp`, `lcp`, `tbt`, `cls`, `transfer`.
 
 ## Commands
 
 | Command | Does | Exit |
 |---------|------|------|
 | `performance-md lint [--strict] [--all]` | Checks the file against this spec. `--strict` requires every defaulted field to be written. `--all` checks every `PERFORMANCE.md` under the current folder, including that names are unique. | 1 on any error |
-| `performance-md check [--report]` | Checks `budgets` against the artifact. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget |
-| `performance-md changed <base> <head>` | Prints the targets whose artifact differs, one per line. | 0 |
-| `performance-md measure <out> [--base <artifact>] [targets…]` | Runs `measure.tool`, alternating base and head when both are given, and writes results. | 1 if the tool fails |
-| `performance-md compare <base-results> <head-results> [--comment <file>]` | Checks `slos` on head and `compare` against base; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken SLO or regression |
+| `performance-md check [--dist <path>] [--report]` | Checks `artifact.budgets`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget |
+| `performance-md changed <base> <head>` | Prints the targets whose artifact differs between two builds, one per line. | 0 |
+| `performance-md measure <out> --head <path\|url> [--base <path\|url>] [targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. | 1 if a tool fails |
+| `performance-md compare <out> [--comment <file>]` | Checks `slos` on head and, when base results exist, `compare`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken SLO or regression |
 
 Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies, so `lint`, `check`, `changed` and `compare` stay light.
 
 ## Results
 
-`measure` writes one JSON object per line to `<out>/results.jsonl`; `compare` reads only this, so new tools need no change to it:
+`measure` writes one JSON object per line to `<out>/results.jsonl`. `compare` reads only this, so a new tool needs no change to it:
 
 ```json
-{"name":"web","side":"head","target":"/","run":1,"metric":"lcp","value":1432,"unit":"ms"}
+{"name":"web","tool":"lighthouse","side":"head","target":"/","run":1,"metric":"lcp","value":1432,"unit":"ms"}
 ```
 
 ## Compatibility
 
-- Within version 1, changes are additive: new kinds, metrics, tools, stats and optional fields. The meaning of an existing key never changes.
-- A tool that meets a kind, tool, metric or field it doesn't know fails with the version it needs. It never skips: a skipped check reads as a pass.
-- Reserved for later minor versions: `surfaces` (several surfaces in one file), `extends` (shared defaults), and the SLO fields above.
+- Within version 1, changes are additive: new artifact types, tools, metrics, stats and optional fields. The meaning of an existing key never changes.
+- A tool that meets an artifact type, tool, metric or field it doesn't know fails with the version it needs. It never skips: a skipped check reads as a pass.
+- Reserved for later minor versions: `surfaces` (several surfaces in one file), `extends` (shared defaults), `artifact.exclude`, `tool: command`, and the SLO fields above.
 
 ## Example
 
 ```yaml
 ---
 version: 1
-kind: web
 artifact:
+  type: static-site
   dist: dist
   origin: https://myhutch.app
   routes: { clean_urls: true }
   hashed_assets: "_astro/**"
-budgets:
-  total: 175 KB
-  html: 13 KB
-  css: 20 KB
-  fonts: 140 KB
-  images: 4 KB
-  js: 0 B
-  image_max: 100 KB
-  image_formats: [svg, webp, avif]
-  image_dimensions: true
-  origins: [self]
-measure: { tool: lighthouse, preset: mobile, runs: 7 }
-slos:
-  - { metric: score, stat: worst,  limit: 90 }
-  - { metric: fcp,   stat: median, limit: 1.8 s }
-  - { metric: lcp,   stat: median, limit: 2.5 s }
-  - { metric: tbt,   stat: median, limit: 200 ms }
-  - { metric: cls,   stat: worst,  limit: 0.1 }
-compare:
-  noise: 2%
-  thresholds: { score: 1, fcp: 50 ms, lcp: 50 ms, tbt: 50 ms, cls: 0.01, transfer: 2 KB }
+  budgets:
+    total: 175 KB
+    html: 13 KB
+    css: 20 KB
+    fonts: 140 KB
+    images: 4 KB
+    js: 0 B
+    image_max: 100 KB
+    image_formats: [svg, webp, avif]
+    image_dimensions: true
+    origins: [self]
+measure:
+  tool: lighthouse
+  preset: mobile
+  runs: 7
+  slos:
+    - { metric: score, stat: worst,  limit: 90 }
+    - { metric: fcp,   stat: median, limit: 1.8 s }
+    - { metric: lcp,   stat: median, limit: 2.5 s }
+    - { metric: tbt,   stat: median, limit: 200 ms }
+    - { metric: cls,   stat: worst,  limit: 0.1 }
+  compare:
+    noise: 2%
+    thresholds: { score: 1, fcp: 50 ms, lcp: 50 ms, tbt: 50 ms, cls: 0.01, transfer: 2 KB }
 ---
 
 # Performance
