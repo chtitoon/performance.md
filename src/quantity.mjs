@@ -30,3 +30,6 @@ export function parseQuantity(input) {
   const unit = UNITS[match[2] ?? ''];
   return { value: Number(match[1]) * unit.factor, dimension: unit.dimension };
 }
+
+// Bytes for people, as Hutch's check printed them: 2495 → "2495 B", 14738 → "14.4 KB".
+export const formatBytes = (bytes) => (bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`);

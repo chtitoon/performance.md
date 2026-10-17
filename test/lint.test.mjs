@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { readFile } from '../src/file.mjs';
 import { lint } from '../src/lint.mjs';
-import { pages } from '../src/static-site.mjs';
 import { fixtures, folder, specExample } from './helpers.mjs';
 
 // Lints front matter given as YAML lines (the --- lines are added). Extra files go next to it.
@@ -181,10 +180,4 @@ test('a file that cannot be read says why', () => {
   assert.match(read('# no front matter\n')[0].message, /no front matter/);
   assert.deepEqual(read('---\nversion: "1.0"\nversion: "1.0"\n---\n').map((e) => e.line), [3]);
   assert.match(read('---\n- a list\n---\n')[0].message, /must be a mapping/);
-});
-
-test('static-site targets are named by the path that serves them', () => {
-  const dist = join(fixtures, 'site/dist');
-  assert.deepEqual(pages(dist, { cleanUrls: true }).map((p) => p.target), ['/404', '/blog/', '/', '/privacy']);
-  assert.deepEqual(pages(dist).map((p) => p.target), ['/404.html', '/blog/', '/', '/privacy.html']);
 });

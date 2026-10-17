@@ -11,8 +11,18 @@ const COMMANDS = {
     options: { strict: { type: 'boolean' }, all: { type: 'boolean' } },
     run: async (values) => (await import('../src/lint.mjs')).runLint(values),
   },
-  check: { usage: 'check [--dist <path>] [--report]', does: 'Check artifact.budgets on the built site' },
-  changed: { usage: 'changed <base> <head>', does: 'Print the targets whose artifact differs between two builds' },
+  check: {
+    usage: 'check [--dist <path>] [--report]',
+    does: 'Check artifact.budgets and artifact.rules on the built site',
+    options: { dist: { type: 'string' }, report: { type: 'boolean' } },
+    run: async (values) => (await import('../src/check.mjs')).runCheck(values),
+  },
+  changed: {
+    usage: 'changed <base> <head>',
+    does: 'Print the targets whose artifact differs between two builds',
+    positionals: 2,
+    run: async (values, positionals) => (await import('../src/changed.mjs')).runChanged(values, positionals),
+  },
   measure: { usage: 'measure <out> --head <path|url> [--base <path|url>] [targets…]', does: 'Run each measure tool and write results' },
   compare: { usage: 'compare <out> [--comment <file>]', does: 'Check metrics limits and deltas on the results' },
 };
@@ -46,7 +56,8 @@ if (!command.run) {
 
 let args;
 try {
-  args = parseArgs({ args: rest, options: { file: { type: 'string' }, ...command.options }, allowPositionals: false });
+  args = parseArgs({ args: rest, options: { file: { type: 'string' }, ...command.options }, allowPositionals: Boolean(command.positionals) });
+  if (command.positionals && args.positionals.length !== command.positionals) throw new Error(`expected ${command.positionals} arguments, got ${args.positionals.length}`);
 } catch (error) {
   process.stderr.write(`performance-md ${name}: ${error.message}\n\nUsage: performance-md ${command.usage} [--file <path>]\n`);
   process.exit(2);
@@ -55,4 +66,10 @@ if (args.values.all && args.values.file) {
   console.error(`performance-md ${name}: give --all or --file, not both`);
   process.exit(2);
 }
-process.exitCode = await command.run(args.values);
+try {
+  process.exitCode = await command.run(args.values, args.positionals);
+} catch (error) {
+  if (!(error instanceof (await import('../src/open.mjs')).Failure)) throw error;
+  console.error(`performance-md ${name}: ${error.message}`);
+  process.exitCode = 1;
+}
