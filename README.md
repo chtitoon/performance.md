@@ -1,5 +1,10 @@
 # performance.md
 
+[![CI](https://github.com/chtitoon/performance.md/actions/workflows/validate-cli.yml/badge.svg?branch=main)](https://github.com/chtitoon/performance.md/actions/workflows/validate-cli.yml)
+[![Format 1.0 alpha](https://img.shields.io/badge/format-1.0%20alpha-orange)](spec.md)
+[![Node ≥ 22](https://img.shields.io/badge/node-%E2%89%A5%2022-339933)](package.json)
+[![License MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A plain-text format for performance budgets, and a small CLI that checks and compares against it. A `PERFORMANCE.md` file holds the rules in its YAML front matter and the reasons in its prose, like [DESIGN.md](https://github.com/google-labs-code/design.md) does for design.
 
 ```markdown
