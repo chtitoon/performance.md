@@ -3,7 +3,7 @@
 // <out>/results.jsonl (spec: Results). A path is a build, served following the artifact settings; a
 // URL is a running server. With a base, runs alternate base and head so a slow moment on the
 // machine hits both alike. Ported from Hutch's run-lighthouse.mjs.
-import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Failure, folder, open, shown } from './open.mjs';
 import { serve } from './serve.mjs';
@@ -14,7 +14,8 @@ const RUNNERS = { lighthouse: async () => (await import('./lighthouse.mjs')).lig
 const isUrl = (location) => /^https?:\/\//i.test(location);
 
 // `runners` maps a tool to a function returning its runner: { start(), run(url, { preset }), stop() },
-// where run() resolves to { toolVersion, browser, metrics: { <metric>: { value, unit } } }.
+// where run() resolves to { toolVersion, browser, metrics: { <metric>: { value, unit } }, raw }, raw
+// being the tool's own report, and a failed run's error may carry `raw` too.
 export async function runMeasure({ file, head, base } = {}, [out, ...narrowed] = [], cwd = process.cwd(), runners = RUNNERS) {
   const performance = open(file, cwd);
   const { artifact } = performance.data;
@@ -51,6 +52,10 @@ export async function runMeasure({ file, head, base } = {}, [out, ...narrowed] =
       const runs = measure.runs ?? MEASURE_DEFAULTS.runs;
       const preset = measure.preset ?? TOOLS[tool].defaults.preset;
       const runner = await runners[tool]();
+      // <out>/<tool>/, emptied first so a previous measurement's reports can't be mistaken for this one's.
+      const raws = join(resolve(cwd, out), tool);
+      rmSync(raws, { recursive: true, force: true });
+      mkdirSync(raws);
       try {
         await runner.start();
       } catch (error) {
@@ -60,12 +65,16 @@ export async function runMeasure({ file, head, base } = {}, [out, ...narrowed] =
         for (let run = 1; run <= runs; run++) {
           for (const target of targets) {
             for (const side of sides.filter((s) => has(s, target))) {
+              // The tool's raw report is kept next to the results, failed runs too: that's when it's needed.
+              const keep = (raw) => raw && writeFileSync(join(raws, `${side.side}${target.replace(/\W/g, '_')}-${run}.json`), JSON.stringify(raw));
               let report;
               try {
                 report = await runner.run(`${side.url}${target}`, { preset });
               } catch (error) {
+                keep(error.raw);
                 throw new Failure(`${tool} failed on ${side.side} ${target}, run ${run}: ${error.message}`);
               }
+              keep(report.raw);
               const lines = Object.entries(report.metrics).map(([metric, { value, unit }]) =>
                 JSON.stringify({ name, tool, tool_version: report.toolVersion, browser: report.browser, side: side.side, target, run, metric, value, unit }));
               appendFileSync(results, `${lines.join('\n')}\n`);

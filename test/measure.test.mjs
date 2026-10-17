@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { browserOf, checkVersion, readReport } from '../src/lighthouse.mjs';
 import { runMeasure } from '../src/measure.mjs';
@@ -18,8 +18,8 @@ function fakeRunner({ fail } = {}) {
     async start() { calls.push('start'); },
     async run(url, { preset }) {
       calls.push(`${preset} ${url.replace(/127\.0\.0\.1:\d+/, 'local')}`);
-      if (fail && calls.length === fail) throw new Error('boom');
-      return { toolVersion: '12.6.1', browser: 'Chrome/141.0.7390.54', metrics: { lcp: { value: 1000 + calls.length, unit: 'ms' }, cls: { value: 0, unit: '' } } };
+      if (fail && calls.length === fail) throw Object.assign(new Error('boom'), { raw: { failed: url } });
+      return { toolVersion: '12.6.1', browser: 'Chrome/141.0.7390.54', metrics: { lcp: { value: 1000 + calls.length, unit: 'ms' }, cls: { value: 0, unit: '' } }, raw: { url } };
     },
     async stop() { calls.push('stop'); },
   };
@@ -84,6 +84,8 @@ test('measure alternates base and head, run by run, and measures a new page on h
   assert.equal(lines.length, 6 * 2);
   assert.deepEqual(lines[0], { name: 'site', tool: 'lighthouse', tool_version: '12.6.1', browser: 'Chrome/141.0.7390.54', side: 'base', target: '/', run: 1, metric: 'lcp', value: 1002, unit: 'ms' });
   assert.deepEqual(lines.map((l) => `${l.side} ${l.target} ${l.run}`).filter((_, i) => i % 2 === 0), ['base / 1', 'head / 1', 'head /privacy 1', 'base / 2', 'head / 2', 'head /privacy 2']);
+  assert.deepEqual(readdirSync(join(dir, 'out/lighthouse')).sort(), ['base_-1.json', 'base_-2.json', 'head_-1.json', 'head_-2.json', 'head_privacy-1.json', 'head_privacy-2.json']);
+  assert.match(readFileSync(join(dir, 'out/lighthouse/head_privacy-2.json'), 'utf8'), /^\{"url":"http:\/\/127\.0\.0\.1:\d+\/privacy"\}$/);
 });
 
 test('targets are every page of the artifact by default, also when measuring a URL', async () => {
@@ -116,6 +118,10 @@ test('a failed run stops measure, keeping the results written so far', async () 
   await assert.rejects(quietly(() => runMeasure({ head: 'dist' }, ['out'], dir, runners)), /lighthouse failed on head \/blog\/, run 1: boom/);
   assert.equal(calls.at(-1), 'stop');
   assert.equal(results(dir).length, 2);
+  assert.deepEqual(readdirSync(join(dir, 'out/lighthouse')).sort(), ['head_404-1.json', 'head_blog_-1.json']); // the failed run's report too
+  // A new measurement starts from empty results and reports.
+  await quietly(() => runMeasure({ head: 'dist' }, ['out', '/'], dir, fakeRunner().runners));
+  assert.deepEqual([results(dir).length, readdirSync(join(dir, 'out/lighthouse'))], [2, ['head_-1.json']]);
 });
 
 test('a Lighthouse report becomes the spec\'s metrics, in base units', () => {

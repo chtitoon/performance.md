@@ -84,8 +84,13 @@ export async function lighthouseRunner() {
         onlyCategories: ['performance'],
         skipAudits: ['screenshot-thumbnails', 'final-screenshot', 'full-page-screenshot'],
       };
-      const result = await lighthouse(url, flags, preset === 'desktop' ? desktop : undefined);
-      return { ...readReport(result.lhr), browser };
+      const { lhr } = await lighthouse(url, flags, preset === 'desktop' ? desktop : undefined);
+      try {
+        return { ...readReport(lhr), browser, raw: lhr };
+      } catch (error) {
+        error.raw = lhr;
+        throw error;
+      }
     },
     async stop() {
       await chrome?.kill();
