@@ -35,7 +35,7 @@ Every limit carries its unit, so a wrong unit is a lint error rather than a sile
 |------|---------|
 | `B`, `KB`, `MB` | bytes; **1 KB = 1024 B**, 1 MB = 1024 KB |
 | `ms`, `s` | time |
-| `%` | percentage (of a ratio, or of a baseline in `compare.noise`) |
+| `%` | percentage (of a ratio, or of a base value in `measure.noise`) |
 | none | unitless (a score, CLS) |
 
 Written as a number, an optional space and the unit: `175 KB`, `2.5 s`, `0.1`, `2%`. A metric or budget only accepts units of its own dimension.
