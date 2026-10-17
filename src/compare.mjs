@@ -9,13 +9,6 @@ import { parseQuantity, UNITS } from './quantity.mjs';
 import { MEASURE_DEFAULTS, METRICS, TOOLS } from './spec.mjs';
 import { stat } from './stats.mjs';
 
-// How each metric reads in the report (short) and in the comment (long).
-const LABELS = {
-  score: ['Score', 'Performance score'], fcp: ['FCP', 'First Contentful Paint'], lcp: ['LCP', 'Largest Contentful Paint'],
-  tbt: ['TBT', 'Total Blocking Time'], cls: ['CLS', 'Cumulative Layout Shift'], transfer: ['Transfer', 'Bytes transferred'],
-  latency: ['Latency', 'Latency'], error_rate: ['Errors', 'Error rate'],
-};
-
 // Values for people: 1.20 s, 96 ms, 30 KB, 0.071, 100. `exact` keeps milliseconds, so a limit missed
 // by 2 ms reads as 1802 ms, not 1.80 s.
 function format(value, metric, exact = false) {
@@ -57,13 +50,20 @@ export function runCompare({ file, comment } = {}, [out] = [], cwd = process.cwd
       if (!mine.length) continue;
       lines.push(`${describe(measure)}, compared with the base.`);
       for (const target of [...new Set(mine.map((g) => g.target))]) {
-        lines.push('', `**${target}**`, ...mine.filter((g) => g.target === target).map((g) => `- ${LABELS[g.metric][1]}${g.statLabel}: ${format(g.before, g.metric)} → ${format(g.now, g.metric)}`));
+        lines.push('', `**${target}**`, ...mine.filter((g) => g.target === target).map((g) => `- ${meaningOf(g)}: ${format(g.before, g.metric)} → ${format(g.now, g.metric)}`));
       }
     }
     writeFileSync(resolve(cwd, comment), `${lines.join('\n')}\n`);
   }
   return failures.length ? 1 : 0;
 }
+
+// `Largest Contentful Paint (lcp)`, `Lighthouse performance score (score, worst)`: the spec's name
+// for readers of the comment, and the file's, so either can be looked up.
+const meaningOf = ({ metric, stat }) => {
+  const { meaning } = METRICS[metric];
+  return `${meaning[0].toUpperCase()}${meaning.slice(1)} (${metric}${stat === 'median' ? '' : `, ${stat}`})`;
+};
 
 const describe = (measure) => `${measure.tool === 'lighthouse' ? 'Lighthouse' : measure.tool} ${measure.preset ?? TOOLS[measure.tool].defaults.preset}, ${measure.runs ?? MEASURE_DEFAULTS.runs} runs per side`;
 
@@ -117,8 +117,8 @@ function compareTool(measure, results, file) {
       const { metric } = entry;
       const { better } = METRICS[metric];
       if (!now[metric]) throw new Failure(`no ${metric} results for head ${target}`);
-      const statLabel = entry.stat === 'median' ? '' : ` (${entry.stat})`;
-      const label = `${LABELS[metric][0]}${statLabel}`;
+      // Named as in the file, so a line points at the entry to look at: `lcp`, `score (worst)`.
+      const label = entry.stat === 'median' ? metric : `${metric} (${entry.stat})`;
       const value = stat(entry.stat, now[metric], better);
       const worse = (a, b) => (better === 'higher' ? b - a : a - b); // how much a is worse than b
       const limit = entry.limit === undefined ? undefined : parseQuantity(entry.limit).value;
@@ -140,7 +140,7 @@ function compareTool(measure, results, file) {
       else if (change === 'improved') lines.push(`  🟢 ${label} ${shownValue}`);
       else same.push(`${label} ${shownValue}`);
       if (change === 'regressed') failures.push(`${target} ${metric} regressed`);
-      if (change === 'improved') gains.push({ target, metric, statLabel, before: base, now: value });
+      if (change === 'improved') gains.push({ target, metric, stat: entry.stat, before: base, now: value });
     }
     if (same.length) lines.push(`  ${lines.length ? 'same' : 'all'}: ${same.join(' · ')}`);
     blocks.push(`${target}${before ? '' : Object.keys(values.base).length ? ' (new page)' : ''}`, ...lines, '');
