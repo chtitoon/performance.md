@@ -44,7 +44,7 @@ export function runCompare({ file, comment } = {}, [out] = [], cwd = process.cwd
   console.log(`${verdict}.\n\n${sections.join('\n')}`);
 
   if (comment && gains.length && !failures.length) {
-    const lines = [`<!-- performance-md:${name} -->`, `### 🚀 ${name} got better`];
+    const lines = [`<!-- performance-md:${name} -->`, `### 🚀 Performance improved for ${name}`];
     for (const measure of measures) {
       const mine = gains.filter((g) => g.measure === measure);
       if (!mine.length) continue;
