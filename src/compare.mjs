@@ -58,11 +58,11 @@ export function runCompare({ file, comment } = {}, [out] = [], cwd = process.cwd
   return failures.length ? 1 : 0;
 }
 
-// `Largest Contentful Paint (lcp)`, `Lighthouse performance score (score, worst)`: the spec's name
-// for readers of the comment, and the file's, so either can be looked up.
+// `Largest Contentful Paint (LCP)`, `Lighthouse performance score (Score, worst)`: the spec's
+// meaning for readers of the comment, with the label the report uses.
 const meaningOf = ({ metric, stat }) => {
-  const { meaning } = METRICS[metric];
-  return `${meaning[0].toUpperCase()}${meaning.slice(1)} (${metric}${stat === 'median' ? '' : `, ${stat}`})`;
+  const { meaning, label } = METRICS[metric];
+  return `${meaning[0].toUpperCase()}${meaning.slice(1)} (${label}${stat === 'median' ? '' : `, ${stat}`})`;
 };
 
 const describe = (measure) => `${measure.tool === 'lighthouse' ? 'Lighthouse' : measure.tool} ${measure.preset ?? TOOLS[measure.tool].defaults.preset}, ${measure.runs ?? MEASURE_DEFAULTS.runs} runs per side`;
@@ -117,8 +117,8 @@ function compareTool(measure, results, file) {
       const { metric } = entry;
       const { better } = METRICS[metric];
       if (!now[metric]) throw new Failure(`no ${metric} results for head ${target}`);
-      // Named as in the file, so a line points at the entry to look at: `lcp`, `score (worst)`.
-      const label = entry.stat === 'median' ? metric : `${metric} (${entry.stat})`;
+      // `LCP`, `Score (worst)`: the stat is named unless it's the median.
+      const label = `${METRICS[metric].label}${entry.stat === 'median' ? '' : ` (${entry.stat})`}`;
       const value = stat(entry.stat, now[metric], better);
       const worse = (a, b) => (better === 'higher' ? b - a : a - b); // how much a is worse than b
       const limit = entry.limit === undefined ? undefined : parseQuantity(entry.limit).value;

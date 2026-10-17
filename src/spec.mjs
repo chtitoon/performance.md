@@ -5,16 +5,17 @@
 // The format version this CLI implements: version 1, up to this minor.
 export const SUPPORTED = { major: 1, minor: 0 };
 
-// Every metric, whichever tool measures it (spec: Metrics).
+// Every metric, whichever tool measures it (spec: Metrics). `label` is how the CLI prints it, not
+// part of the format: files and results use the id.
 export const METRICS = {
-  score: { dimension: 'unitless', better: 'higher', range: [0, 100], meaning: 'Lighthouse performance score' },
-  fcp: { dimension: 'time', better: 'lower', meaning: 'First Contentful Paint' },
-  lcp: { dimension: 'time', better: 'lower', meaning: 'Largest Contentful Paint' },
-  tbt: { dimension: 'time', better: 'lower', meaning: 'Total Blocking Time' },
-  cls: { dimension: 'unitless', better: 'lower', meaning: 'Cumulative Layout Shift' },
-  transfer: { dimension: 'bytes', better: 'lower', meaning: 'bytes over the network, as transferred' },
-  latency: { dimension: 'time', better: 'lower', meaning: 'time from request to complete response' },
-  error_rate: { dimension: 'percent', better: 'lower', range: [0, 100], meaning: 'share of requests that failed' },
+  score: { label: 'Score', dimension: 'unitless', better: 'higher', range: [0, 100], meaning: 'Lighthouse performance score' },
+  fcp: { label: 'FCP', dimension: 'time', better: 'lower', meaning: 'First Contentful Paint' },
+  lcp: { label: 'LCP', dimension: 'time', better: 'lower', meaning: 'Largest Contentful Paint' },
+  tbt: { label: 'TBT', dimension: 'time', better: 'lower', meaning: 'Total Blocking Time' },
+  cls: { label: 'CLS', dimension: 'unitless', better: 'lower', meaning: 'Cumulative Layout Shift' },
+  transfer: { label: 'Transfer', dimension: 'bytes', better: 'lower', meaning: 'bytes over the network, as transferred' },
+  latency: { label: 'Latency', dimension: 'time', better: 'lower', meaning: 'time from request to complete response' },
+  error_rate: { label: 'Error rate', dimension: 'percent', better: 'lower', range: [0, 100], meaning: 'share of requests that failed' },
 };
 
 // `p95` → 95; anything that isn't a percentile → undefined.

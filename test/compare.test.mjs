@@ -36,11 +36,11 @@ test('worse by more than both delta and noise regresses; within either it is on 
   const entry = lcp('{ metric: lcp, stat: median, delta: 20 ms }');
   // 2% of 2000 ms is 40 ms, more than the 20 ms delta: 30 ms worse is noise.
   const noisy = surface(entry, { 'base / lcp': [2000, 2000, 2000], 'head / lcp': [2030, 2030, 2030] });
-  assert.deepEqual(cli(['compare', 'out'], noisy), { status: 0, stdout: 'On par with base.\n\nLighthouse mobile, 5 runs per side, base → head, median unless noted.\n\n/\n  all: lcp 2.03 s\n\n', stderr: '' });
+  assert.deepEqual(cli(['compare', 'out'], noisy), { status: 0, stdout: 'On par with base.\n\nLighthouse mobile, 5 runs per side, base → head, median unless noted.\n\n/\n  all: LCP 2.03 s\n\n', stderr: '' });
   const worse = surface(entry, { 'base / lcp': [2000, 2000, 2000], 'head / lcp': [2050, 2050, 2050] });
   const { status, stdout } = cli(['compare', 'out'], worse);
   assert.equal(status, 1);
-  assert.match(stdout, /^❌ Failed\.\n[\s\S]*\/\n  🔴 lcp 2\.00 s → 2\.05 s\n[\s\S]*❌ past a limit · 🔴 worse than base by more than delta and noise; see measure.metrics in PERFORMANCE.md/);
+  assert.match(stdout, /^❌ Failed\.\n[\s\S]*\/\n  🔴 LCP 2\.00 s → 2\.05 s\n[\s\S]*❌ past a limit · 🔴 worse than base by more than delta and noise; see measure.metrics in PERFORMANCE.md/);
 });
 
 test('an improvement earns a comment, unless something else regressed', () => {
@@ -48,8 +48,8 @@ test('an improvement earns a comment, unless something else regressed', () => {
   const better = surface(entries, { 'base / lcp': [1500], 'head / lcp': [1400], 'base / transfer': [40960], 'head / transfer': [40960] });
   const { status, stdout } = cli(['compare', 'out', '--comment', 'comment.md'], better);
   assert.equal(status, 0);
-  assert.match(stdout, /^🟢 Better than base\.\n[\s\S]*  🟢 lcp 1\.50 s → 1\.40 s\n  same: transfer 40 KB\n/);
-  assert.equal(readFileSync(join(better, 'comment.md'), 'utf8'), '<!-- performance-md:web -->\n### 🚀 web got better\nLighthouse mobile, 5 runs per side, compared with the base.\n\n**/**\n- Largest Contentful Paint (lcp): 1.50 s → 1.40 s\n');
+  assert.match(stdout, /^🟢 Better than base\.\n[\s\S]*  🟢 LCP 1\.50 s → 1\.40 s\n  same: Transfer 40 KB\n/);
+  assert.equal(readFileSync(join(better, 'comment.md'), 'utf8'), '<!-- performance-md:web -->\n### 🚀 web got better\nLighthouse mobile, 5 runs per side, compared with the base.\n\n**/**\n- Largest Contentful Paint (LCP): 1.50 s → 1.40 s\n');
   const mixed = surface(entries, { 'base / lcp': [1500], 'head / lcp': [1400], 'base / transfer': [40960], 'head / transfer': [45056] });
   assert.equal(cli(['compare', 'out', '--comment', 'comment.md'], mixed).status, 1);
   assert.equal(existsSync(join(mixed, 'comment.md')), false);
@@ -66,9 +66,9 @@ test('limits are checked on head in the metric\'s direction, with exact values',
 Lighthouse mobile, 5 runs per side, median unless noted.
 
 /
-  ❌ lcp 1502 ms, past the 1500 ms limit
-  ❌ score (worst) 98, past the 99 limit
-  same: cls (worst) 0.071
+  ❌ LCP 1502 ms, past the 1500 ms limit
+  ❌ Score (worst) 98, past the 99 limit
+  same: CLS (worst) 0.071
 
 ❌ past a limit · 🔴 worse than base by more than delta and noise; see measure.metrics in PERFORMANCE.md
 
@@ -77,14 +77,14 @@ Lighthouse mobile, 5 runs per side, median unless noted.
 
 test('without base results, only limits are checked', () => {
   const dir = surface(lcp('{ metric: lcp, stat: median, limit: 2 s, delta: 1 ms }'), { 'head / lcp': [1000] });
-  assert.equal(cli(['compare', 'out'], dir).stdout, 'Within limits.\n\nLighthouse mobile, 5 runs per side, median unless noted.\n\n/\n  all: lcp 1.00 s\n\n');
+  assert.equal(cli(['compare', 'out'], dir).stdout, 'Within limits.\n\nLighthouse mobile, 5 runs per side, median unless noted.\n\n/\n  all: LCP 1.00 s\n\n');
 });
 
 test('a page base does not have is new: its limits count, its deltas cannot', () => {
   const dir = surface(lcp('{ metric: lcp, stat: median, limit: 2 s, delta: 1 ms }'), { 'base / lcp': [1000], 'head / lcp': [1000], 'head /new lcp': [3000] });
   const { status, stdout } = cli(['compare', 'out'], dir);
   assert.equal(status, 1);
-  assert.match(stdout, /\/new \(new page\)\n  ❌ lcp 3000 ms, past the 2000 ms limit\n/);
+  assert.match(stdout, /\/new \(new page\)\n  ❌ LCP 3000 ms, past the 2000 ms limit\n/);
 });
 
 test('an override replaces the fields it sets for its target, keeping the others', () => {
@@ -92,7 +92,7 @@ test('an override replaces the fields it sets for its target, keeping the others
     'base /slow lcp': [2000], 'head /slow lcp': [2100], 'head /slow tbt': [50],
   });
   const { stdout } = cli(['compare', 'out'], dir);
-  assert.match(stdout, /\/slow\n  🔴 lcp 2\.00 s → 2\.10 s\n  same: tbt \(max\) 50 ms\n/);
+  assert.match(stdout, /\/slow\n  🔴 LCP 2\.00 s → 2\.10 s\n  same: TBT \(max\) 50 ms\n/);
 });
 
 test('results it cannot trust are refused', () => {
@@ -116,5 +116,5 @@ test('a value in another unit of the same dimension is converted', () => {
   const dir = surface(lcp('{ metric: lcp, stat: median, limit: 2 s }'), {}, {
     extra: [JSON.stringify({ name: 'web', tool: 'lighthouse', tool_version: '12.6.1', browser: 'Chrome/155.0.8059.84', side: 'head', target: '/', run: 1, metric: 'lcp', value: 2.5, unit: 's' })],
   });
-  assert.match(cli(['compare', 'out'], dir).stdout, /❌ lcp 2500 ms, past the 2000 ms limit/);
+  assert.match(cli(['compare', 'out'], dir).stdout, /❌ LCP 2500 ms, past the 2000 ms limit/);
 });
