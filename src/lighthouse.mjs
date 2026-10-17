@@ -2,7 +2,7 @@
 // lint, check, changed and compare never install a browser. One Chrome serves every run, and only
 // the performance category runs: about 5 s a run instead of 10 with `lhci collect`, with the same
 // results. Lighthouse's default waits stay: shorter ones can stop recording before a late font swap
-// shifts the layout. Ported from Hutch's run-lighthouse.mjs.
+// shifts the layout.
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
