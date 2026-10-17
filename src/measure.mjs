@@ -1,14 +1,15 @@
-// `performance-md measure <out> --head <path|url> [--base <path|url>] [targets…]`: runs each
-// measure tool on every target, `runs` times per side, and writes one line per metric per run to
-// <out>/results.jsonl (spec: Results). A path is a build, served following the artifact settings; a
-// URL is a running server. With a base, runs alternate base and head so a slow moment on the
-// machine hits both alike.
+// `performance-md measure <out> --head <path|url> [--base <path|url>] [--all | targets…]`: runs
+// each measure tool on every target, `runs` times per side, and writes one line per metric per run
+// to <out>/results.jsonl (spec: Results). A path is a build, served following the artifact settings;
+// a URL is a running server. With a base, runs alternate base and head so a slow moment on the
+// machine hits both alike. Given two builds, only the pages whose files differ are measured:
+// identical files give identical results.
 import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { Failure, folder, open, shown } from './open.mjs';
 import { serve } from './serve.mjs';
 import { MEASURE_DEFAULTS, TOOLS } from './spec.mjs';
-import { fileFor, pages } from './static-site.mjs';
+import { changedPages, fileFor, pages } from './static-site.mjs';
 
 const RUNNERS = { lighthouse: async () => (await import('./lighthouse.mjs')).lighthouseRunner() };
 const isUrl = (location) => /^https?:\/\//i.test(location);
@@ -16,7 +17,7 @@ const isUrl = (location) => /^https?:\/\//i.test(location);
 // `runners` maps a tool to a function returning its runner: { start(), run(url, { preset }), stop() },
 // where run() resolves to { toolVersion, browser, metrics: { <metric>: { value, unit } }, raw }, raw
 // being the tool's own report, and a failed run's error may carry `raw` too.
-export async function runMeasure({ file, head, base } = {}, [out, ...narrowed] = [], cwd = process.cwd(), runners = RUNNERS) {
+export async function runMeasure({ file, head, base, all = false } = {}, [out, ...narrowed] = [], cwd = process.cwd(), runners = RUNNERS) {
   const performance = open(file, cwd);
   const { artifact } = performance.data;
   const name = performance.data.name ?? performance.defaultName;
@@ -29,13 +30,20 @@ export async function runMeasure({ file, head, base } = {}, [out, ...narrowed] =
     if (!artifact) throw new Failure(`--${side} ${at} is a build, and serving one needs the artifact settings, which ${performance.shown} doesn't have; give a URL instead`);
     return { side, dist: folder(resolve(cwd, at), at) };
   });
-  const targets = targetsOf(performance, sides.at(-1), narrowed, cleanUrls);
+  let targets = targetsOf(performance, sides.at(-1), narrowed, cleanUrls);
+  if (!all && !narrowed.length && sides.length === 2 && sides.every((s) => s.dist)) {
+    const changed = new Set(changedPages(sides[0].dist, sides[1].dist, { cleanUrls, hashedAssets: artifact.hashed_assets }));
+    const count = targets.length;
+    targets = targets.filter((target) => changed.has(target));
+    console.log(targets.length ? `Measuring the ${targets.length} of ${count} pages that differ from base: ${targets.join(' ')}` : 'No page differs from base: nothing to measure');
+  }
   // A page the base build lacks is new: it's measured on head only.
   const has = (side, target) => !side.dist || fileFor(side.dist, target, { cleanUrls }) !== undefined;
 
   mkdirSync(resolve(cwd, out), { recursive: true });
   const results = join(resolve(cwd, out), 'results.jsonl');
   writeFileSync(results, '');
+  if (!targets.length) return 0; // an empty results.jsonl: compare passes it
   let written = 0;
   const servers = [];
   try {

@@ -152,13 +152,13 @@ artifact:
   origin: https://example.com # required; the site's own origin
   routes:
     clean_urls: true          # /about serves about.html; default false
-  hashed_assets: "_astro/**"  # glob of content-hashed files; default none. Used by `changed`.
+  hashed_assets: "_astro/**"  # glob of content-hashed files; default none. Used to find changed pages.
   fonts: unicode-range        # count a @font-face only if the page uses characters in its range (default), or `all`
 ```
 
 **Targets:** every `.html` file in `dist`, named by path (`/`, `/privacy`).
 
-**Changed pages** (for `changed`): a page changed if its HTML differs. Files matching `hashed_assets` are skipped, because a change to one changes its name and so the HTML that links it. Any other file that differs, appears or disappears (a `favicon.svg`, say) counts as a change to every page.
+**Changed pages** (for `measure`): a page changed if its HTML differs. Files matching `hashed_assets` are skipped, because a change to one changes its name and so the HTML that links it. Any other file that differs, appears or disappears (a `favicon.svg`, say) counts as a change to every page.
 
 **What counts as a page's download:** the HTML; stylesheets it links and inline `<style>`; scripts it loads; images in `<img src>` (and `srcset`: the largest candidate, an upper bound); `<link rel="preload|icon">`; and, from CSS, `url()` references and the first `src` of each `@font-face` that the `fonts` setting selects. All weights of a matching family count (an upper bound). Sizes are uncompressed bytes on disk; `transfer` in `measure` is the compressed counterpart.
 
@@ -191,7 +191,7 @@ measure:
 ```
 
 **Measures against:** a `static-site` build (served locally, text compressed) or a URL.
-**Targets:** the artifact's pages, whether measuring a build or a URL, so a check of the live site covers every page too. With no `artifact`, the paths given on the command line, or `/`.
+**Targets:** the artifact's pages, whether measuring a build or a URL, so a check of the live site covers every page too. When base and head are both builds, only the [changed pages](#static-site): identical files give identical results. With no `artifact`, the paths given on the command line, or `/`.
 **Emits:** `score`, `fcp`, `lcp`, `tbt`, `cls`, `transfer`.
 **Version:** the CLI pins the Lighthouse version it runs and records it, with the browser's, in every result. Scores shift between Lighthouse and Chrome versions, so upgrading the CLI is a deliberate change: comparisons stay fair (both sides run on the same versions), but absolute limits may need a look.
 
@@ -203,11 +203,10 @@ The `performance-md` CLI in this repository implements this section. It isn't on
 |---------|------|------|
 | `performance-md lint [--strict] [--all]` | Checks the file against this spec. `--strict` requires every defaulted field to be written. `--all` checks every `PERFORMANCE.md` under the current folder, including that names are unique. | 1 on any error |
 | `performance-md check [--dist <path>] [--report]` | Checks `artifact.budgets` and `artifact.rules`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget or rule |
-| `performance-md changed <base> <head>` | Prints the targets whose artifact differs between two builds, one per line. | 0 |
-| `performance-md measure <out> --head <path\|url> [--base <path\|url>] [targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. | 1 if a tool fails |
+| `performance-md measure <out> --head <path\|url> [--base <path\|url>] [--all \| targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. Given two builds, measures only the targets whose artifact differs; `--all` measures every target, and targets given on the command line are measured as given. | 1 if a tool fails |
 | `performance-md compare <out> [--comment <file>]` | Checks each `metrics` limit on head and, when base results exist, each `delta`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken limit or regression |
 
-Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies, so `lint`, `check`, `changed` and `compare` stay light.
+Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies, so `lint`, `check` and `compare` stay light.
 
 ## Results
 
@@ -220,6 +219,8 @@ Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies
 `unit` is required: a unit of the metric's dimension from [Quantities](#quantities), or `""` for a unitless metric (`score`, `cls`). `compare` rejects a line whose unit doesn't fit its metric, so a tool reporting seconds can't pass for one reporting milliseconds.
 
 `compare` refuses to compare base and head results recorded with different tool or browser versions.
+
+When no target differs between two builds, `measure` writes an empty `results.jsonl`, and `compare` passes it: nothing changed, so nothing can have regressed. A file with results, none of them for this surface's `name`, is an error.
 
 ## Compatibility
 

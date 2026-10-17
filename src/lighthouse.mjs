@@ -1,5 +1,5 @@
 // The lighthouse tool (spec: Tools). Lighthouse is an optional dependency, loaded only here, so
-// lint, check, changed and compare never install a browser. One Chrome serves every run, and only
+// lint, check and compare never install a browser. One Chrome serves every run, and only
 // the performance category runs: about 5 s a run instead of 10 with `lhci collect`, with the same
 // results. Lighthouse's default waits stay: shorter ones can stop recording before a late font swap
 // shifts the layout.

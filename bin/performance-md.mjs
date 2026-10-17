@@ -9,6 +9,7 @@ const COMMANDS = {
     usage: 'lint [--strict] [--all]',
     does: 'Check the file against the spec; --all checks every PERFORMANCE.md under this folder',
     options: { strict: { type: 'boolean' }, all: { type: 'boolean' } },
+    conflict: (values) => values.all && values.file && 'give --all or --file, not both',
     run: async (values) => (await import('../src/lint.mjs')).runLint(values),
   },
   check: {
@@ -17,18 +18,13 @@ const COMMANDS = {
     options: { dist: { type: 'string' }, report: { type: 'boolean' } },
     run: async (values) => (await import('../src/check.mjs')).runCheck(values),
   },
-  changed: {
-    usage: 'changed <base> <head>',
-    does: 'Print the targets whose artifact differs between two builds',
-    positionals: [2, 2],
-    run: async (values, positionals) => (await import('../src/changed.mjs')).runChanged(values, positionals),
-  },
   measure: {
-    usage: 'measure <out> --head <path|url> [--base <path|url>] [targets…]',
-    does: 'Run each measure tool and write <out>/results.jsonl',
-    options: { head: { type: 'string' }, base: { type: 'string' } },
+    usage: 'measure <out> --head <path|url> [--base <path|url>] [--all | targets…]',
+    does: 'Run each measure tool into <out>/results.jsonl; given two builds, on the pages that differ',
+    options: { head: { type: 'string' }, base: { type: 'string' }, all: { type: 'boolean' } },
     required: ['head'],
     positionals: [1, Infinity],
+    conflict: (values, positionals) => values.all && positionals.length > 1 && 'give --all or targets, not both',
     run: async (values, positionals) => (await import('../src/measure.mjs')).runMeasure(values, positionals),
   },
   compare: {
@@ -73,8 +69,9 @@ try {
   process.stderr.write(`performance-md ${name}: ${error.message}\n\nUsage: performance-md ${command.usage} [--file <path>]\n`);
   process.exit(2);
 }
-if (args.values.all && args.values.file) {
-  console.error(`performance-md ${name}: give --all or --file, not both`);
+const conflict = command.conflict?.(args.values, args.positionals);
+if (conflict) {
+  console.error(`performance-md ${name}: ${conflict}`);
   process.exit(2);
 }
 try {

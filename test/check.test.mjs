@@ -65,14 +65,3 @@ test('check refuses what it cannot check', () => {
 test('with no budgets or rules, check says nothing was checked', () => {
   assert.equal(cli(['check'], site('', { 'index.html': 'hi' })).stdout, 'No budgets or rules in PERFORMANCE.md; nothing checked across 1 pages\n');
 });
-
-test('changed prints the targets that differ, one per line', () => {
-  const dir = folder({
-    'PERFORMANCE.md': '---\nversion: "1.0"\nartifact: { type: static-site, dist: dist, origin: "https://example.com", routes: { clean_urls: true }, hashed_assets: "_astro/**" }\n---\n',
-    'base/index.html': 'home', 'base/about.html': 'about', 'base/_astro/a.1.css': 'a',
-    'head/index.html': 'home', 'head/about.html': 'about!', 'head/_astro/a.2.css': 'b',
-  });
-  assert.deepEqual(cli(['changed', 'base', 'head'], dir), { status: 0, stdout: '/about\n', stderr: '' });
-  assert.equal(cli(['changed', 'base'], dir).status, 2);
-  assert.equal(cli(['changed', 'base', 'nope'], dir).stderr, "performance-md changed: nope doesn't exist or isn't a folder\n");
-});
