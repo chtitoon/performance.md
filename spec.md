@@ -22,7 +22,7 @@ Status: alpha. Version 1 may still change before the first tagged release; after
 version: 1      # required; the format version, not the tool's
 name: web       # optional; defaults to the folder name. Unique across a repository: results are keyed by it.
 artifact: {}    # optional; what the surface ships, and budgets on it
-measure: {}     # optional; how to measure it, and SLOs and comparisons on the results
+measure: {}     # optional; how to measure it, and limits and comparisons on the results
 ```
 
 A file has `artifact`, `measure` or both. Unknown keys are an error at every level, except keys starting with `x-`, which tools ignore.
@@ -68,53 +68,51 @@ How the surface is measured, and the limits on what's measured.
 measure:
   tool: lighthouse    # required; decides the other settings and which metrics exist
   runs: 7             # per side when comparing; default 5
+  noise: 2%           # how noisy the measurement is, as a share of the base value; default 0%
   # settings of the tool
-  slos: []
-  compare: {}
-  overrides: {}       # per target: `slos` and `compare`, merged over the file's
+  metrics: []
+  overrides: {}       # per target: `metrics` entries, merged over the file's
 ```
 
-`measure` may also be a list of these, one per tool. Each entry's `slos` and `compare` apply to its own tool's results only.
+`measure` may also be a list of these, one per tool. Each entry's `metrics` apply to its own tool's results only.
 
 What is measured is given on the command line: a path is a build, served locally following the `artifact` settings (so it needs an `artifact`); a URL is a running server.
 
-### slos
+### metrics
 
 ```yaml
-slos:
-  - { metric: lcp, stat: median, limit: 2.5 s }
+metrics:
+  - { metric: lcp,      stat: median, limit: 2.5 s, delta: 50 ms }
+  - { metric: transfer, stat: median,               delta: 2 KB }
 ```
 
-Each entry: `metric` (one the tool emits), `stat` and `limit`. A target fails if the statistic over its runs is worse than the limit, in the metric's direction.
+Each entry is one statistic of one metric, with the rules on it:
 
-`stat` is one of: `median`, `mean`, `min`, `max`, `worst` (the worst run in the metric's direction), `p<N>` (nearest-rank percentile, e.g. `p95`).
+- `metric`: one the tool emits.
+- `stat`: one of `median`, `mean`, `min`, `max`, `worst` (the worst run in the metric's direction), `p<N>` (nearest-rank percentile, e.g. `p95`).
+- `limit`: the statistic over a target's runs must not be worse than this, in the metric's direction.
+- `delta`: when a base is measured too, how much worse than the base still counts as on par.
 
-Reserved for later, so adding them is not a breaking change: `objective` and `window` (production SLOs such as 99.9% over 28 days) and `source` (`lab` in version 1, later `production`). Version 1 tools reject them with "not supported yet" rather than ignoring them, so no one thinks they are enforced.
+An entry needs `limit`, `delta` or both. The same metric may appear with different stats (`lcp` at `median` and `p95`), each with its own rules; `metric` and `stat` together are unique.
 
-### compare
+With a base, each entry with a `delta` compares head with base:
 
-```yaml
-compare:
-  noise: 2%
-  thresholds: { lcp: 50 ms, cls: 0.01 }
-```
-
-Compares a head (a pull request, say) with a base (main), measured the same way. For each target and each metric in `thresholds`, using the same `stat` as that metric's SLO (`median` if it has none):
-
-- **regressed** if it got worse by more than both its threshold and `noise` × the base value;
+- **regressed** if it got worse by more than both `delta` and `noise` × the base value;
 - **improved** if it got better by more than both;
 - otherwise **on par**.
 
-Any regression fails the comparison. A metric not in `thresholds` isn't compared.
+A broken limit or a regression fails. Without a base, only limits are checked.
+
+Reserved for later, so adding them is not a breaking change: `objective` and `window` (production objectives such as 99.9% over 28 days) and `source` (`lab` in version 1, later `production`). Version 1 tools reject them with "not supported yet" rather than ignoring them, so no one thinks they are enforced.
 
 ### overrides
 
 ```yaml
 overrides:
-  /pricing: { slos: [{ metric: lcp, stat: median, limit: 3 s }] }
+  /pricing: { metrics: [{ metric: lcp, stat: median, limit: 3 s }] }
 ```
 
-An SLO replaces the file's entry with the same `metric` and `stat`; a `compare` key replaces the same key.
+An entry replaces the fields it sets on the file's entry with the same `metric` and `stat` (here the `limit`; the `delta` stays), or adds the entry if the file has none.
 
 ## Metrics
 
@@ -191,7 +189,7 @@ measure:
 | `performance-md check [--dist <path>] [--report]` | Checks `artifact.budgets`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget |
 | `performance-md changed <base> <head>` | Prints the targets whose artifact differs between two builds, one per line. | 0 |
 | `performance-md measure <out> --head <path\|url> [--base <path\|url>] [targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. | 1 if a tool fails |
-| `performance-md compare <out> [--comment <file>]` | Checks `slos` on head and, when base results exist, `compare`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken SLO or regression |
+| `performance-md compare <out> [--comment <file>]` | Checks each `metrics` limit on head and, when base results exist, each `delta`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken limit or regression |
 
 Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies, so `lint`, `check`, `changed` and `compare` stay light.
 
@@ -207,7 +205,7 @@ Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies
 
 - Within version 1, changes are additive: new artifact types, tools, metrics, stats and optional fields. The meaning of an existing key never changes.
 - A tool that meets an artifact type, tool, metric or field it doesn't know fails with the version it needs. It never skips: a skipped check reads as a pass.
-- Reserved for later minor versions: `surfaces` (several surfaces in one file), `extends` (shared defaults), `artifact.exclude`, `tool: command`, and the SLO fields above.
+- Reserved for later minor versions: `surfaces` (several surfaces in one file), `extends` (shared defaults), `artifact.exclude`, `tool: command`, and the production fields of a `metrics` entry above.
 
 ## Example
 
@@ -235,15 +233,14 @@ measure:
   tool: lighthouse
   preset: mobile
   runs: 7
-  slos:
-    - { metric: score, stat: worst,  limit: 90 }
-    - { metric: fcp,   stat: median, limit: 1.8 s }
-    - { metric: lcp,   stat: median, limit: 2.5 s }
-    - { metric: tbt,   stat: median, limit: 200 ms }
-    - { metric: cls,   stat: worst,  limit: 0.1 }
-  compare:
-    noise: 2%
-    thresholds: { score: 1, fcp: 50 ms, lcp: 50 ms, tbt: 50 ms, cls: 0.01, transfer: 2 KB }
+  noise: 2%
+  metrics:
+    - { metric: score,    stat: worst,  limit: 90,     delta: 1 }
+    - { metric: fcp,      stat: median, limit: 1.8 s,  delta: 50 ms }
+    - { metric: lcp,      stat: median, limit: 2.5 s,  delta: 50 ms }
+    - { metric: tbt,      stat: median, limit: 200 ms, delta: 50 ms }
+    - { metric: cls,      stat: worst,  limit: 0.1,    delta: 0.01 }
+    - { metric: transfer, stat: median,                delta: 2 KB }
 ---
 
 # Performance
