@@ -1,4 +1,4 @@
-// `performance-md measure <out> --head <path|url> [--base <path|url>] [--all | targets…]`: runs
+// `performance measure <out> --head <path|url> [--base <path|url>] [--all | targets…]`: runs
 // each measure tool on every target, `runs` times per side, and writes one line per metric per run
 // to <out>/results.jsonl (spec: Results). A path is a build, served following the artifact settings;
 // a URL is a running server. With a base, runs alternate base and head so a slow moment on the

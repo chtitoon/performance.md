@@ -5,7 +5,7 @@ import { relative } from 'node:path';
 import { findFile, readFile, FILE_NAME } from './file.mjs';
 import { lint } from './lint.mjs';
 
-// A failure the command reports as `performance-md <command>: <message>`, exiting 1.
+// A failure the command reports as `performance <command>: <message>`, exiting 1.
 export class Failure extends Error {}
 
 // A path for messages: relative to `cwd` when it's below it.
@@ -19,7 +19,7 @@ export function open(file, cwd = process.cwd()) {
   const { errors } = lint(read);
   if (errors.length) {
     for (const { line, message } of errors) console.error(`${shown(path, cwd)}${line ? `:${line}` : ''}: error: ${message}`);
-    throw new Failure(`${shown(path, cwd)} has errors; see performance-md lint`);
+    throw new Failure(`${shown(path, cwd)} has errors; see performance lint`);
   }
   return { ...read, shown: shown(path, cwd) };
 }

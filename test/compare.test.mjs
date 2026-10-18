@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fixtures, folder, root } from './helpers.mjs';
 
 const cli = (args, cwd) => {
-  const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance-md.mjs'), ...args], { cwd, encoding: 'utf8' });
+  const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance.mjs'), ...args], { cwd, encoding: 'utf8' });
   return { status, stdout, stderr };
 };
 
@@ -99,17 +99,17 @@ test('results it cannot trust are refused', () => {
   const entry = lcp('{ metric: lcp, stat: median, limit: 2 s }');
   const line = (fields) => JSON.stringify({ name: 'web', tool: 'lighthouse', tool_version: '12.6.1', browser: 'Chrome/155.0.8059.84', side: 'head', target: '/', run: 1, metric: 'lcp', value: 1, unit: 'ms', ...fields });
   const refused = (extra) => cli(['compare', 'out'], surface(entry, {}, { extra })).stderr;
-  assert.equal(refused([line({ unit: '' })]), 'performance-md compare: out/results.jsonl:1: lcp is a time value, not ""\n');
-  assert.equal(refused([line({ metric: 'cls', unit: 'ms' })]), 'performance-md compare: out/results.jsonl:1: cls is unitless, with unit "", not "ms"\n');
-  assert.equal(refused(['{oops']), 'performance-md compare: out/results.jsonl:1: not a JSON object\n');
-  assert.equal(refused([line({ side: 'main' })]), 'performance-md compare: out/results.jsonl:1: side is base or head, not main\n');
+  assert.equal(refused([line({ unit: '' })]), 'performance compare: out/results.jsonl:1: lcp is a time value, not ""\n');
+  assert.equal(refused([line({ metric: 'cls', unit: 'ms' })]), 'performance compare: out/results.jsonl:1: cls is unitless, with unit "", not "ms"\n');
+  assert.equal(refused(['{oops']), 'performance compare: out/results.jsonl:1: not a JSON object\n');
+  assert.equal(refused([line({ side: 'main' })]), 'performance compare: out/results.jsonl:1: side is base or head, not main\n');
   assert.match(refused([line({ metric: 'ttfb' })]), /ttfb is not a metric/);
   assert.match(refused([JSON.stringify({ name: 'web' })]), /missing tool/);
   assert.match(refused([line({ side: 'base', browser: 'Chrome/154.0.1.1' }), line({})]), /base was measured with lighthouse 12.6.1 on Chrome\/154.0.1.1 and head with lighthouse 12.6.1 on Chrome\/155.0.8059.84; compare needs both on the same versions/);
   assert.match(refused([line({ tool_version: '12.6.0' }), line({ run: 2 })]), /head was measured with more than one version/);
   assert.match(refused([line({ name: 'docs' })]), /has no results for web/);
   assert.match(cli(['compare', 'out'], surface(lcp('{ metric: tbt, stat: median, limit: 1 s }'), { 'head / lcp': [1] })).stderr, /no tbt results for head \//);
-  assert.match(cli(['compare', 'nowhere'], surface(entry, {})).stderr, /nowhere\/results.jsonl doesn't exist; run performance-md measure first/);
+  assert.match(cli(['compare', 'nowhere'], surface(entry, {})).stderr, /nowhere\/results.jsonl doesn't exist; run performance measure first/);
 });
 
 test('empty results, from a measure that found no page changed, pass without a comment', () => {

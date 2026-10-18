@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fixtures, folder, root } from './helpers.mjs';
 
 const cli = (args, cwd = root) => {
-  const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance-md.mjs'), ...args], { cwd, encoding: 'utf8' });
+  const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance.mjs'), ...args], { cwd, encoding: 'utf8' });
   return { status, stdout, stderr };
 };
 const file = (name, extra = '') => `---\nversion: "1.0"\n${name ? `name: ${name}\n` : ''}measure: { tool: lighthouse }\n${extra}---\n`;
