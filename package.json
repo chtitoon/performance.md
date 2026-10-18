@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "bin": {
-    "performance-md": "bin/performance-md.mjs"
+    "performance": "bin/performance.mjs"
   },
   "files": [
     "bin",

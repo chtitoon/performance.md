@@ -199,14 +199,14 @@ measure:
 
 ## Commands
 
-The `performance-md` CLI in this repository implements this section. It isn't on npm yet: install it from a commit (see the README).
+The `performance` command, from the `performance-md` package in this repository, implements this section. It isn't on npm yet: install it from a commit (see the README).
 
 | Command | Does | Exit |
 |---------|------|------|
-| `performance-md lint [--strict] [--all]` | Checks the file against this spec. `--strict` requires every defaulted field to be written. `--all` checks every `PERFORMANCE.md` under the current folder, including that names are unique. | 1 on any error |
-| `performance-md check [--dist <path>] [--report]` | Checks `artifact.budgets` and `artifact.rules`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget or rule |
-| `performance-md measure <out> --head <path\|url> [--base <path\|url>] [--all \| targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. Given two builds, measures only the targets whose artifact differs; `--all` measures every target, and targets given on the command line are measured as given. | 1 if a tool fails |
-| `performance-md compare <out> [--comment <file>]` | Checks each `metrics` limit on head and, when base results exist, each `delta`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken limit or regression |
+| `performance lint [--strict] [--all]` | Checks the file against this spec. `--strict` requires every defaulted field to be written. `--all` checks every `PERFORMANCE.md` under the current folder, including that names are unique. | 1 on any error |
+| `performance check [--dist <path>] [--report]` | Checks `artifact.budgets` and `artifact.rules`. `--report` prints measured sizes. Never needs a browser or network. | 1 on any broken budget or rule |
+| `performance measure <out> --head <path\|url> [--base <path\|url>] [--all \| targets…]` | Runs each `measure` tool, alternating base and head when both are given, and writes results. Given two builds, measures only the targets whose artifact differs; `--all` measures every target, and targets given on the command line are measured as given. | 1 if a tool fails |
+| `performance compare <out> [--comment <file>]` | Checks each `metrics` limit on head and, when base results exist, each `delta`; prints a plain-text report. Writes `<file>` only when something improved and nothing regressed. | 1 on any broken limit or regression |
 
 Tools needed only by `measure` (Lighthouse, a browser) are optional dependencies, so `lint`, `check` and `compare` stay light.
 

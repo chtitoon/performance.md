@@ -188,15 +188,15 @@ test('only the pinned Lighthouse runs', () => {
 
 test('measure without Lighthouse installed says how to install it', { skip: canResolve('lighthouse') && 'Lighthouse is installed here' }, () => {
   const dir = site('  runs: 1');
-  const { status, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance-md.mjs'), 'measure', 'out', '--head', 'dist'], { cwd: dir, encoding: 'utf8' });
-  assert.deepEqual([status, stderr], [1, 'performance-md measure: measure needs Lighthouse, an optional dependency: npm install --no-save lighthouse@12.6.1\n']);
+  const { status, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance.mjs'), 'measure', 'out', '--head', 'dist'], { cwd: dir, encoding: 'utf8' });
+  assert.deepEqual([status, stderr], [1, 'performance measure: measure needs Lighthouse, an optional dependency: npm install --no-save lighthouse@12.6.1\n']);
 });
 
 test('measure usage', () => {
-  const cli = (args) => spawnSync(process.execPath, [join(root, 'bin/performance-md.mjs'), ...args], { cwd: root, encoding: 'utf8' });
+  const cli = (args) => spawnSync(process.execPath, [join(root, 'bin/performance.mjs'), ...args], { cwd: root, encoding: 'utf8' });
   assert.match(cli(['measure', 'out']).stderr, /--head is required/);
   assert.match(cli(['measure', '--head', 'dist']).stderr, /expected at least 1 argument, got 0/);
-  assert.deepEqual([cli(['measure', 'out', '--head', 'dist', '--all', '/']).status, cli(['measure', 'out', '--head', 'dist', '--all', '/']).stderr], [2, 'performance-md measure: give --all or targets, not both\n']);
+  assert.deepEqual([cli(['measure', 'out', '--head', 'dist', '--all', '/']).status, cli(['measure', 'out', '--head', 'dist', '--all', '/']).stderr], [2, 'performance measure: give --all or targets, not both\n']);
 });
 
 function canResolve(name) {

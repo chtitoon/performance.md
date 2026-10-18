@@ -1,6 +1,6 @@
 # Working on performance.md
 
-This repo holds the PERFORMANCE.md format (`spec.md`) and `performance-md`, the CLI that implements it.
+This repo holds the PERFORMANCE.md format (`spec.md`) and the `performance-md` package, whose `performance` command implements it.
 
 ## Rules
 
@@ -15,8 +15,8 @@ This repo holds the PERFORMANCE.md format (`spec.md`) and `performance-md`, the 
 |---------|------|
 | `npm ci` | Install from a fresh clone |
 | `npm test` | All tests (`node:test`, files in `test/*.test.mjs`) |
-| `node bin/performance-md.mjs lint [--strict] [--all] [--file <path>]` | Check a PERFORMANCE.md against the spec |
-| `node bin/performance-md.mjs check`, `measure`, `compare` | The other commands of the spec's Commands table |
+| `node bin/performance.mjs lint [--strict] [--all] [--file <path>]` | Check a PERFORMANCE.md against the spec |
+| `node bin/performance.mjs check`, `measure`, `compare` | The other commands of the spec's Commands table |
 | `npm install --no-save lighthouse@12.6.1` | Before running `measure` by hand; it uses the installed Chrome, or the one `CHROME_PATH` names |
 
 ## How the code is built

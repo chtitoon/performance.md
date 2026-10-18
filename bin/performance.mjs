@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// performance-md: checks a surface against its PERFORMANCE.md. The commands and their exit codes are
+// performance: checks a surface against its PERFORMANCE.md. The commands and their exit codes are
 // spec.md's "Commands" table. Usage errors exit 2, so they can't pass for a broken budget.
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
@@ -36,7 +36,7 @@ const COMMANDS = {
   },
 };
 
-const USAGE = `Usage: performance-md <command> [--file <path>]
+const USAGE = `Usage: performance <command> [--file <path>]
 
 ${Object.values(COMMANDS).map((c) => `  ${c.usage.padEnd(62)} ${c.does}`).join('\n')}
 
@@ -55,7 +55,7 @@ if (name === '--version') {
 
 const command = COMMANDS[name];
 if (!command) {
-  process.stderr.write(`performance-md: unknown command ${name}\n\n${USAGE}`);
+  process.stderr.write(`performance: unknown command ${name}\n\n${USAGE}`);
   process.exit(2);
 }
 let args;
@@ -66,18 +66,18 @@ try {
   if (count < min || count > max) throw new Error(`expected ${min === max ? min : `at least ${min}`} argument${min === 1 ? '' : 's'}, got ${count}`);
   for (const option of command.required ?? []) if (args.values[option] === undefined) throw new Error(`--${option} is required`);
 } catch (error) {
-  process.stderr.write(`performance-md ${name}: ${error.message}\n\nUsage: performance-md ${command.usage} [--file <path>]\n`);
+  process.stderr.write(`performance ${name}: ${error.message}\n\nUsage: performance ${command.usage} [--file <path>]\n`);
   process.exit(2);
 }
 const conflict = command.conflict?.(args.values, args.positionals);
 if (conflict) {
-  console.error(`performance-md ${name}: ${conflict}`);
+  console.error(`performance ${name}: ${conflict}`);
   process.exit(2);
 }
 try {
   process.exitCode = await command.run(args.values, args.positionals);
 } catch (error) {
   if (!(error instanceof (await import('../src/open.mjs')).Failure)) throw error;
-  console.error(`performance-md ${name}: ${error.message}`);
+  console.error(`performance ${name}: ${error.message}`);
   process.exitCode = 1;
 }

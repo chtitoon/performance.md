@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/chtitoon/performance.md/main/schema.json",
   "title": "PERFORMANCE.md front matter",
-  "description": "The front matter of a PERFORMANCE.md file, format version 1.0 (spec.md). `performance-md lint` checks this schema plus what a schema can't express: units by dimension, metrics each tool emits, unique metric and stat, and overrides of real targets.",
+  "description": "The front matter of a PERFORMANCE.md file, format version 1.0 (spec.md). `performance lint` checks this schema plus what a schema can't express: units by dimension, metrics each tool emits, unique metric and stat, and overrides of real targets.",
   "type": "object",
   "required": ["version"],
   "properties": {

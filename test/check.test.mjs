@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fixtures, folder, root } from './helpers.mjs';
 
 const cli = (args, cwd = root) => {
-  const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance-md.mjs'), ...args], { cwd, encoding: 'utf8' });
+  const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, 'bin/performance.mjs'), ...args], { cwd, encoding: 'utf8' });
   return { status, stdout, stderr };
 };
 // A site: its PERFORMANCE.md's artifact settings (YAML lines under `artifact:`) and its built files.
@@ -55,10 +55,10 @@ test('--dist checks another build, whose pages the overrides must name', () => {
 });
 
 test('check refuses what it cannot check', () => {
-  assert.match(cli(['check'], site('  budgets: { html: 1 }', {})).stderr, /error: artifact.budgets.html: 1 has no unit[\s\S]*has errors; see performance-md lint\n$/);
+  assert.match(cli(['check'], site('  budgets: { html: 1 }', {})).stderr, /error: artifact.budgets.html: 1 has no unit[\s\S]*has errors; see performance lint\n$/);
   assert.match(cli(['check'], folder({ 'PERFORMANCE.md': '---\nversion: "1.0"\nmeasure: { tool: lighthouse }\n---\n' })).stderr, /has no artifact to check/);
   const unbuilt = site('  budgets: { html: 1 KB }', {});
-  assert.deepEqual([cli(['check'], unbuilt).status, cli(['check'], unbuilt).stderr], [1, "performance-md check: dist doesn't exist or isn't a folder\n"]);
+  assert.deepEqual([cli(['check'], unbuilt).status, cli(['check'], unbuilt).stderr], [1, "performance check: dist doesn't exist or isn't a folder\n"]);
   assert.match(cli(['check'], site('', { 'a.css': '' })).stderr, /dist has no .html pages/);
 });
 

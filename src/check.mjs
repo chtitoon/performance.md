@@ -1,4 +1,4 @@
-// `performance-md check`: every page of the built site against artifact.budgets and artifact.rules.
+// `performance check`: every page of the built site against artifact.budgets and artifact.rules.
 // No browser and no network: it reads the built files and adds up what each page makes the browser
 // download. `--report` prints each page's measured sizes, used to set the budgets.
 import { join, resolve } from 'node:path';

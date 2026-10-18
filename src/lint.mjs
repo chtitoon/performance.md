@@ -1,4 +1,4 @@
-// `performance-md lint`: checks a PERFORMANCE.md against spec.md. schema.json catches the shape;
+// `performance lint`: checks a PERFORMANCE.md against spec.md. schema.json catches the shape;
 // this adds what a schema can't express: units by dimension, which metrics a tool emits, unique
 // metric and stat, overrides of targets that exist, and the version the file needs.
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -213,6 +213,6 @@ export function runLint({ strict = false, all = false, file } = {}, cwd = proces
 }
 
 function fail(message) {
-  console.error(`performance-md lint: ${message}`);
+  console.error(`performance lint: ${message}`);
   return 1;
 }

@@ -34,10 +34,10 @@ loads only; a median of a coin flip is noise, and the shift still happens to rea
 ```
 
 ```console
-$ npx performance-md check
+$ npx performance check
 Budgets and rules OK across 4 pages (largest 77.6 KB)
 
-$ npx performance-md compare results
+$ npx performance compare results
 ❌ Failed.
 
 Lighthouse mobile, 5 runs per side, base → head, median unless noted.
@@ -69,16 +69,26 @@ npm install --save-dev "github:chtitoon/performance.md#<commit>"
 Write `PERFORMANCE.md` next to the site's `package.json` (the example above, or the complete one at the end of [spec.md](spec.md)), then:
 
 ```sh
-npx performance-md lint               # the file follows the spec
-npm run build && npx performance-md check --report   # budgets and rules, with each page's sizes
+npx performance lint               # the file follows the spec
+npm run build && npx performance check --report   # budgets and rules, with each page's sizes
+```
+
+The package is `performance-md`; its command is `performance`. To run it as `npm run performance:lint` and so on, add scripts to the site's `package.json`:
+
+```json
+"scripts": {
+  "performance:lint": "performance lint --strict",
+  "performance:check": "performance check",
+  "performance:compare": "performance compare results"
+}
 ```
 
 To measure, install Lighthouse, which the CLI pins and loads only for `measure`:
 
 ```sh
 npm install --no-save lighthouse@12.6.1
-npx performance-md measure results --base ../main/dist --head dist
-npx performance-md compare results --comment comment.md
+npx performance measure results --base ../main/dist --head dist
+npx performance compare results --comment comment.md
 ```
 
 Given two builds, `measure` skips the pages a change can't have affected, since identical files give identical results. It measures pages whose HTML differs (new pages too), and every page when a file shared by pages, other than a [hashed asset](spec.md#static-site), differs: a new `favicon.svg` could change any of them. `--all` measures every page.
@@ -87,7 +97,7 @@ Given two builds, `measure` skips the pages a change can't have affected, since 
 
 Two checks, each where it fits:
 
-- **Deploy gate:** add `performance-md check` after your build (for example in `npm test`). It needs no browser, so a host's build can run it.
+- **Deploy gate:** add `performance check` after your build (for example in `npm test`). It needs no browser, so a host's build can run it.
 - **Pull requests:** build the base and the PR, measure the pages a change can affect, and compare. The CLI never talks to GitHub: `compare` prints a report and, when something got better and nothing got worse, writes a comment file for your workflow to post.
 
 A GitHub Actions job for a site at the repository root, with `performance-md` in its devDependencies:
@@ -117,13 +127,13 @@ jobs:
         working-directory: head
         run: |
           npm install --no-save lighthouse@12.6.1
-          npx performance-md measure ../results --base ../base/dist --head dist
+          npx performance measure ../results --base ../base/dist --head dist
 
       - name: Compare
         working-directory: head
         run: |
           set +e
-          npx performance-md compare ../results --comment ../comment.md > ../report.txt
+          npx performance compare ../results --comment ../comment.md > ../report.txt
           status=$?
           cat ../report.txt
           { echo '```text'; cat ../report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
