@@ -1,8 +1,8 @@
 // The lighthouse tool (spec: Tools). Lighthouse is an optional dependency, loaded only here, so
-// lint, check and compare never install a browser. One Chrome serves every run, and only
-// the performance category runs: about 5 s a run instead of 10 with `lhci collect`, with the same
-// results. Lighthouse's default waits stay: shorter ones can stop recording before a late font swap
-// shifts the layout.
+// lint, check and compare never install a browser. One Chrome serves every run, only the
+// performance category runs, and nothing is gathered that no metric uses (RUN_FLAGS): about 3.7 s a
+// run instead of 10 with `lhci collect`, with the same results. Lighthouse's default waits stay:
+// shorter ones can stop recording before a late font swap shifts the layout.
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -14,7 +14,7 @@ const VERSION = TOOLS.lighthouse.version;
 const INSTALL = `npm install --no-save lighthouse@${VERSION}`;
 
 // Each metric's value in a Lighthouse report, in the spec's base units.
-const METRICS = {
+export const METRICS = {
   // null when Lighthouse couldn't score the page, which must not read as 0.
   score: { unit: '', read: (lhr) => (typeof lhr.categories.performance?.score === 'number' ? lhr.categories.performance.score * 100 : undefined) },
   fcp: { unit: 'ms', audit: 'first-contentful-paint' },
@@ -23,6 +23,17 @@ const METRICS = {
   cls: { unit: '', audit: 'cumulative-layout-shift' },
   transfer: { unit: 'B', audit: 'total-byte-weight' },
 };
+
+// What every run asks of Lighthouse. Skipping an audit doesn't skip what it gathers, so the full-page
+// screenshot (about 1.1 s a run) is turned off by its own setting. `bf-cache` gathers by navigating
+// away and back (about 0.3 s) and weighs 0 in the score. Neither feeds a metric this CLI reads.
+export const RUN_FLAGS = Object.freeze({
+  output: 'json',
+  logLevel: 'error',
+  onlyCategories: ['performance'],
+  disableFullPageScreenshot: true,
+  skipAudits: ['screenshot-thumbnails', 'final-screenshot', 'full-page-screenshot', 'bf-cache'],
+});
 
 // `HeadlessChrome/141.0.7390.54` → `Chrome/141.0.7390.54`. Read from Chrome's own version endpoint,
 // not the user agent, which hides the build (`Chrome/141.0.0.0`): two builds would look the same and
@@ -77,14 +88,7 @@ export async function lighthouseRunner() {
       browser = browserOf((await (await fetch(`http://127.0.0.1:${chrome.port}/json/version`)).json()).Browser);
     },
     async run(url, { preset }) {
-      const flags = {
-        port: chrome.port,
-        output: 'json',
-        logLevel: 'error',
-        onlyCategories: ['performance'],
-        skipAudits: ['screenshot-thumbnails', 'final-screenshot', 'full-page-screenshot'],
-      };
-      const { lhr } = await lighthouse(url, flags, preset === 'desktop' ? desktop : undefined);
+      const { lhr } = await lighthouse(url, { ...RUN_FLAGS, port: chrome.port }, preset === 'desktop' ? desktop : undefined);
       try {
         return { ...readReport(lhr), browser, raw: lhr };
       } catch (error) {

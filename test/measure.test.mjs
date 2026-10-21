@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { cpSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { browserOf, checkVersion, readReport } from '../src/lighthouse.mjs';
+import { METRICS, RUN_FLAGS, browserOf, checkVersion, readReport } from '../src/lighthouse.mjs';
 import { runMeasure } from '../src/measure.mjs';
 import { serve } from '../src/serve.mjs';
 import { fixtures, folder, root } from './helpers.mjs';
@@ -179,6 +179,14 @@ test('a Lighthouse report becomes the spec\'s metrics, in base units', () => {
   assert.throws(() => readReport({ ...lhr, categories: { performance: { score: null } } }), /no score/);
   assert.equal(browserOf('HeadlessChrome/155.0.8059.84'), 'Chrome/155.0.8059.84');
   assert.equal(browserOf('Chrome/140.0.1.2'), 'Chrome/140.0.1.2');
+});
+
+test('runs skip only what no metric reads', () => {
+  assert.deepEqual(RUN_FLAGS.onlyCategories, ['performance']);
+  assert.equal(RUN_FLAGS.disableFullPageScreenshot, true);
+  const read = Object.values(METRICS).map((m) => m.audit).filter(Boolean);
+  assert.ok(read.length > 0);
+  for (const audit of RUN_FLAGS.skipAudits) assert.ok(!read.includes(audit), `${audit} is skipped, but a metric reads it`);
 });
 
 test('only the pinned Lighthouse runs', () => {
